@@ -2,8 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
+import Redis from 'ioredis';
+
 import healthRoutes from './routes/health';
+import eventsRoutes from './routes/events.routes';
+
+import './workers/propagation.worker';
 
 dotenv.config();
 
@@ -14,17 +19,35 @@ const wss = new WebSocketServer({ server });
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/events', eventsRoutes);
 
-// WebSocket connection
+const subscriberRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+subscriberRedis.subscribe('gridlock:events', (err, count) => {
+  if (err) {
+    console.error('Failed to subscribe to Redis channel', err);
+  } else {
+    console.log(`Subscribed to ${count} Redis channels.`);
+  }
+});
+
+subscriberRedis.on('message', (channel, message) => {
+  if (channel === 'gridlock:events') {
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+});
+
 wss.on('connection', (ws) => {
-  console.log('New client connected');
+  console.log('New WebSocket client connected');
   ws.on('message', (message) => {
-    console.log(`Received: ${message}`);
+    console.log(`WS Received: ${message}`);
   });
   ws.on('close', () => {
-    console.log('Client disconnected');
+    console.log('WebSocket client disconnected');
   });
 });
 
