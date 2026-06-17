@@ -49,7 +49,9 @@ npm run dev
 Once running:
 - **Frontend App**: http://localhost:5173
 - **Backend API**: http://localhost:4000
+  - Health check: `GET http://localhost:4000/api/health`
 - **ML API**: http://localhost:8000
+  - Health check: `GET http://localhost:8000/api/health`
 
 ---
 
