@@ -38,6 +38,7 @@ def oof_predictions(
     y_raw: np.ndarray,
     n_splits: int,
     encoders_template: Encoders,
+    keep_cols: list[str] | None = None,
 ):
     tscv = TimeSeriesSplit(n_splits=n_splits)
     oof = np.full(len(df), np.nan)
@@ -50,6 +51,9 @@ def oof_predictions(
         fold_enc = _make_encoders_for_fold(tr_df, pd.Series(y_raw[tr_idx], index=tr_df.index))
         X_tr = fold_enc.transform(tr_df)
         X_va = fold_enc.transform(va_df)
+        if keep_cols is not None:
+            X_tr = X_tr[keep_cols]
+            X_va = X_va[keep_cols]
 
         if model_type == "lgb":
             ds_tr = lgb.Dataset(X_tr, label=y_tr)
@@ -174,8 +178,7 @@ def run_training():
         if pruned:
             log.info("Candidates for pruning (%d): %s", len(pruned), pruned)
             keep_cols = [f for f in feature_names if f not in pruned]
-            pruned_train_df = train_df.copy()
-            oof_p = oof_predictions("lgb", lgb_best, pruned_train_df, y_train_raw, n_splits, full_enc)
+            oof_p = oof_predictions("lgb", lgb_best, train_df, y_train_raw, n_splits, full_enc, keep_cols=keep_cols)
             valid_p = ~np.isnan(oof_p)
 
             X_train_pruned = X_train[keep_cols]
@@ -188,21 +191,43 @@ def run_training():
             else:
                 log.info("Pruning rejected (RMSE %.4f -> %.4f)", base_rmse, pruned_rmse)
 
+    # --- Blend weight tuning on OOF predictions ---
+    log.info("--- Blend weight tuning ---")
+    oof_lgb_blend = oof_predictions("lgb", lgb_best, train_df, y_train_raw, n_splits, full_enc)
+    oof_cat_blend = oof_predictions("cat", cat_best, train_df, y_train_raw, n_splits, full_enc)
+    valid_both = ~(np.isnan(oof_lgb_blend) | np.isnan(oof_cat_blend))
+    y_log_valid = np.log1p(y_train_raw[valid_both])
+
+    blend_grid = model_cfg.get("blend_grid", [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70])
+    best_w, best_blend_rmse = 0.5, np.inf
+    for w in blend_grid:
+        blended = w * oof_lgb_blend[valid_both] + (1 - w) * oof_cat_blend[valid_both]
+        rmse = np.sqrt(np.mean((blended - y_log_valid) ** 2))
+        if rmse < best_blend_rmse:
+            best_w, best_blend_rmse = w, rmse
+    log.info("Blend weight (LGB): %.2f, OOF RMSE: %.4f", best_w, best_blend_rmse)
+
     # --- Train final models on full training set ---
     log.info("--- Training final models ---")
     y_log_train = np.log1p(y_train_raw)
 
-    # LightGBM final
+    # LightGBM final (multi-seed averaging)
+    seeds = model_cfg.get("seeds", [42, 123])
     lgb_params_final = {**lgb_best, "verbose": -1, "objective": "regression", "metric": "rmse"}
     n_est = lgb_params_final.pop("n_estimators", 2000)
     es_r = lgb_params_final.pop("early_stopping_rounds", 50)
     ds_tr = lgb.Dataset(X_train, label=y_log_train)
     ds_te = lgb.Dataset(X_test, label=np.log1p(y_test_raw), reference=ds_tr)
-    lgb_model = lgb.train(
-        lgb_params_final, ds_tr, num_boost_round=n_est,
-        valid_sets=[ds_te],
-        callbacks=[lgb.early_stopping(es_r, verbose=False), lgb.log_evaluation(0)],
-    )
+    lgb_models = []
+    for seed in seeds:
+        params_s = {**lgb_params_final, "seed": seed}
+        m = lgb.train(
+            params_s, ds_tr, num_boost_round=n_est,
+            valid_sets=[ds_te],
+            callbacks=[lgb.early_stopping(es_r, verbose=False), lgb.log_evaluation(0)],
+        )
+        lgb_models.append(m)
+    log.info("Trained %d LGB models (seeds: %s)", len(lgb_models), seeds)
 
     # CatBoost final
     cat_params_final = {**cat_best, "verbose": 0, "loss_function": "RMSE"}
@@ -211,15 +236,15 @@ def run_training():
     cat_model = CatBoostRegressor(iterations=cat_iters, early_stopping_rounds=cat_es, **cat_params_final)
     cat_model.fit(X_train, y_log_train, eval_set=(X_test, np.log1p(y_test_raw)), verbose=0)
 
-    # --- Ensemble predictions ---
-    lgb_pred_train = lgb_model.predict(X_train)
+    # --- Ensemble predictions (multi-seed avg + tuned blend weight) ---
+    lgb_pred_train = np.mean([m.predict(X_train) for m in lgb_models], axis=0)
     cat_pred_train = cat_model.predict(X_train)
-    ens_pred_train = (lgb_pred_train + cat_pred_train) / 2.0
+    ens_pred_train = best_w * lgb_pred_train + (1 - best_w) * cat_pred_train
     pred_train_mins = np.expm1(ens_pred_train)
 
-    lgb_pred_test = lgb_model.predict(X_test)
+    lgb_pred_test = np.mean([m.predict(X_test) for m in lgb_models], axis=0)
     cat_pred_test = cat_model.predict(X_test)
-    ens_pred_test = (lgb_pred_test + cat_pred_test) / 2.0
+    ens_pred_test = best_w * lgb_pred_test + (1 - best_w) * cat_pred_test
     pred_test_mins = np.expm1(ens_pred_test)
 
     # --- Compute severity ---
@@ -240,7 +265,8 @@ def run_training():
     out_dir.mkdir(parents=True, exist_ok=True)
     log.info("Saving artifacts to %s", out_dir)
 
-    lgb_model.save_model(str(out_dir / "lgb_model.txt"))
+    for i, m in enumerate(lgb_models):
+        m.save_model(str(out_dir / f"lgb_model_{i}.txt"))
     cat_model.save_model(str(out_dir / "cat_model.cbm"))
 
     with open(out_dir / "encoders.pkl", "wb") as f:
@@ -250,7 +276,12 @@ def run_training():
         json.dump(feature_names, f)
 
     with open(out_dir / "confidence.json", "w") as f:
-        json.dump({"base_confidence": round(confidence_base, 4), "residual_std": round(residual_std, 2)}, f)
+        json.dump({
+            "base_confidence": round(confidence_base, 4),
+            "residual_std": round(residual_std, 2),
+            "blend_weight": round(best_w, 4),
+            "n_lgb_seeds": len(seeds),
+        }, f)
 
     # --- Write reference table for fingerprinting ---
     from .evaluate import write_reference_table, compute_metrics, check_overfit, severity_sanity, learning_curve

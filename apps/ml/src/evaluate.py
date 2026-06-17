@@ -19,11 +19,22 @@ def compute_metrics(y_train, pred_train, y_test, pred_test) -> dict:
         ss_res = np.sum((y_true - y_pred) ** 2)
         ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
         r2 = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+        # Log-space metrics (more meaningful for skewed duration)
+        y_log = np.log1p(y_true)
+        p_log = np.log1p(np.maximum(y_pred, 0))
+        log_mae = float(np.mean(np.abs(y_log - p_log)))
+        log_rmse = float(np.sqrt(np.mean((y_log - p_log) ** 2)))
+        ss_res_log = np.sum((y_log - p_log) ** 2)
+        ss_tot_log = np.sum((y_log - np.mean(y_log)) ** 2)
+        log_r2 = float(1 - ss_res_log / ss_tot_log) if ss_tot_log > 0 else 0.0
         return {
             f"{prefix}_mae": round(mae, 2),
             f"{prefix}_rmse": round(rmse, 2),
             f"{prefix}_mape": round(mape, 2),
             f"{prefix}_r2": round(r2, 4),
+            f"{prefix}_log_mae": round(log_mae, 4),
+            f"{prefix}_log_rmse": round(log_rmse, 4),
+            f"{prefix}_log_r2": round(log_r2, 4),
         }
 
     m = {}

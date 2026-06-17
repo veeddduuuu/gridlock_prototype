@@ -10,8 +10,8 @@ MODEL_YAML = CONFIG_DIR / "model.yaml"
 
 MISSING_TOKEN = "__MISSING__"
 
-CATEGORICAL_COLS = ["event_cause", "corridor", "veh_type", "event_type"]
-TARGET_ENC_COLS = ["event_cause", "corridor"]
+CATEGORICAL_COLS = ["event_cause", "corridor", "veh_type", "event_type", "police_station", "zone"]
+TARGET_ENC_COLS = ["event_cause", "corridor", "police_station", "zone"]
 
 DURATION_COL = "duration_mins"
 SEVERITY_COL = "severity_score"

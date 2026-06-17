@@ -13,6 +13,8 @@ def run_prediction(predictor: Predictor, req: PredictRequest) -> dict:
         "requires_road_closure": req.requires_road_closure,
         "event_type": req.event_type,
         "veh_type": req.veh_type or "",
+        "police_station": req.police_station,
+        "zone": req.zone,
     }
     return predictor.predict(event)
 

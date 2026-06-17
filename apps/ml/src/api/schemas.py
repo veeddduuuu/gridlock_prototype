@@ -13,6 +13,8 @@ class PredictRequest(BaseModel):
     requires_road_closure: bool = False
     event_type: str = "unplanned"
     veh_type: str | None = None
+    police_station: str = ""
+    zone: str = ""
 
     # Backend sends lat/lon, category, type — accept both forms
     lat: float | None = Field(default=None, exclude=True)
@@ -46,6 +48,7 @@ class SimilarEvent(BaseModel):
     corridor: str
     hour: int
     duration_mins: float
+    severity_score: float = 0.0
     similarity_score: float
 
 

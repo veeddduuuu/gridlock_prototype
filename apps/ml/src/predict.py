@@ -27,7 +27,7 @@ def find_latest_artifacts() -> Path | None:
         return None
     dirs = sorted(ARTIFACTS_DIR.iterdir(), reverse=True)
     for d in dirs:
-        if d.is_dir() and (d / "lgb_model.txt").exists():
+        if d.is_dir() and (d / "lgb_model_0.txt").exists():
             return d
     return None
 
@@ -42,7 +42,15 @@ class Predictor:
         self.artifacts_dir = artifacts_dir
         self.timestamp = artifacts_dir.name
 
-        self.lgb_model = lgb.Booster(model_file=str(artifacts_dir / "lgb_model.txt"))
+        # Load multi-seed LGB models
+        self.lgb_models = []
+        i = 0
+        while (artifacts_dir / f"lgb_model_{i}.txt").exists():
+            self.lgb_models.append(lgb.Booster(model_file=str(artifacts_dir / f"lgb_model_{i}.txt")))
+            i += 1
+        if not self.lgb_models:
+            raise FileNotFoundError(f"No LGB models found in {artifacts_dir}")
+
         self.cat_model = CatBoostRegressor()
         self.cat_model.load_model(str(artifacts_dir / "cat_model.cbm"))
 
@@ -57,7 +65,8 @@ class Predictor:
             with open(conf_path) as f:
                 self._conf = json.load(f)
         else:
-            self._conf = {"base_confidence": 0.7}
+            self._conf = {"base_confidence": 0.7, "blend_weight": 0.5}
+        self.blend_weight = self._conf.get("blend_weight", 0.5)
 
         ref_path = artifacts_dir / "reference.parquet"
         self.fingerprinter = Fingerprinter(ref_path) if ref_path.exists() else None
@@ -73,9 +82,9 @@ class Predictor:
                 X[col] = 0
         X = X[self.feature_names]
 
-        lgb_pred = self.lgb_model.predict(X)[0]
+        lgb_pred = float(np.mean([m.predict(X)[0] for m in self.lgb_models]))
         cat_pred = self.cat_model.predict(X)[0]
-        pred_log = (lgb_pred + cat_pred) / 2.0
+        pred_log = self.blend_weight * lgb_pred + (1 - self.blend_weight) * cat_pred
         pred_mins = float(np.expm1(pred_log))
         pred_mins = max(1.0, pred_mins)
 
