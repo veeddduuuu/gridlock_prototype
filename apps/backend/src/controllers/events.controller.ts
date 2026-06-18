@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 
 import { removePropagationJob, schedulePropagationJob } from '../services/queue.service'
+import { generateDispatchPlan, getHistoricalPrecedents } from '../services/recommendation.service'
+import { simulationService } from '../services/simulation.service'
 import { query } from '../utils/db'
 
 /**
@@ -98,7 +100,57 @@ export const createEvent = async (req: Request, res: Response) => {
 
     const activeEvent = updateResult.rows[0]
 
-    // 4. Schedule Propagation Job
+    // 4. Historical precedents (stand-in for the ML fingerprinting service)
+    const precedents = getHistoricalPrecedents(activeEvent.category)
+
+    // 5. Congestion forecast at T+0, T+15, T+30
+    const forecast = simulationService.getCongestionForecast(
+      activeEvent.lat,
+      activeEvent.lon,
+      activeEvent.severity_score,
+    )
+
+    // 6. Available fleet inventory
+    const fleetResult = await query(
+      `SELECT id, name, current_lat, current_lon FROM users WHERE status = 'available' AND role = 'fleet'`,
+    )
+    const availableFleet = fleetResult.rows
+
+    // 7. Generate the dispatch plan (rule-based stand-in for the LLM call)
+    const plan = generateDispatchPlan({
+      event: activeEvent,
+      forecast,
+      precedents,
+      availableFleet,
+    })
+
+    // 8. Persist the plan and create pending fleet assignments
+    const recommendationUpdate = await query(
+      `UPDATE events
+       SET recommendation_status = 'completed', recommendation_rationale = $1, total_fleet_required = $2
+       WHERE id = $3
+       RETURNING *`,
+      [plan.rationale, plan.total_fleet_required, eventId],
+    )
+    const eventWithRecommendation = recommendationUpdate.rows[0]
+
+    for (const deployment of plan.deployments) {
+      const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
+      await query(
+        `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+        [
+          eventId,
+          deployment.user_id,
+          deployment.junctionName,
+          deployment.role,
+          deployByTime,
+          deployment.priority,
+        ],
+      )
+    }
+
+    // 9. Schedule Propagation Job
     await schedulePropagationJob(
       eventId,
       activeEvent.severity_score,
@@ -108,7 +160,8 @@ export const createEvent = async (req: Request, res: Response) => {
 
     res.status(201).json({
       message: 'Event created successfully',
-      event: activeEvent,
+      event: eventWithRecommendation,
+      recommendation: plan,
     })
   } catch (error) {
     console.error('Error creating event:', error)

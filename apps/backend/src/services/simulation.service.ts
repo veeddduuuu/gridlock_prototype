@@ -16,6 +16,12 @@ export interface Interventions {
   fleetDeployments: string[] // List of junction IDs with fleet (accelerates decay)
 }
 
+export interface CongestionForecast {
+  t0_nodes: string[]
+  t15_nodes: string[]
+  t30_nodes: string[]
+}
+
 export class SimulationService {
   /**
    * Initializes the simulation state starting from a single epicenter.
@@ -46,7 +52,11 @@ export class SimulationService {
   /**
    * Advances the simulation by one tick using a simple probability-based BFS spread.
    */
-  public tick(state: PropagationState, interventions: Interventions): PropagationState {
+  public tick(
+    state: PropagationState,
+    interventions: Interventions,
+    silent = false,
+  ): PropagationState {
     const newState: PropagationState = {
       activeNodes: { ...state.activeNodes },
       currentTick: state.currentTick + 1,
@@ -82,10 +92,12 @@ export class SimulationService {
               intensity: childIntensity,
               discoveredAtTick: newState.currentTick,
             }
-            console.log(
-              `[Simulation] Tick ${newState.currentTick}: SPREAD ${nodeId} → ${neighborId} | roll=${roll.toFixed(3)} < chance=${spreadChance.toFixed(3)} | intensity=${childIntensity.toFixed(3)}`,
-            )
-          } else {
+            if (!silent) {
+              console.log(
+                `[Simulation] Tick ${newState.currentTick}: SPREAD ${nodeId} → ${neighborId} | roll=${roll.toFixed(3)} < chance=${spreadChance.toFixed(3)} | intensity=${childIntensity.toFixed(3)}`,
+              )
+            }
+          } else if (!silent) {
             console.log(
               `[Simulation] Tick ${newState.currentTick}: NO SPREAD ${nodeId} → ${neighborId} | roll=${roll.toFixed(3)} >= chance=${spreadChance.toFixed(3)}`,
             )
@@ -107,11 +119,13 @@ export class SimulationService {
 
       // 3. Remove recovered nodes
       if (newState.activeNodes[nodeId].intensity < 0.05) {
-        console.log(
-          `[Simulation] Tick ${newState.currentTick}: RECOVERED ${nodeId} (intensity dropped below 0.05)`,
-        )
+        if (!silent) {
+          console.log(
+            `[Simulation] Tick ${newState.currentTick}: RECOVERED ${nodeId} (intensity dropped below 0.05)`,
+          )
+        }
         delete newState.activeNodes[nodeId]
-      } else {
+      } else if (!silent) {
         console.log(
           `[Simulation] Tick ${newState.currentTick}: DECAY ${nodeId} intensity=${newState.activeNodes[nodeId].intensity.toFixed(3)} (decay=${decayFactor})`,
         )
@@ -119,10 +133,41 @@ export class SimulationService {
     }
 
     const activeCount = Object.keys(newState.activeNodes).length
-    console.log(
-      `[Simulation] Tick ${newState.currentTick} complete — ${activeCount} active node(s): [${Object.keys(newState.activeNodes).join(', ')}]`,
-    )
+    if (!silent) {
+      console.log(
+        `[Simulation] Tick ${newState.currentTick} complete — ${activeCount} active node(s): [${Object.keys(newState.activeNodes).join(', ')}]`,
+      )
+    }
     return newState
+  }
+
+  /**
+   * Fast-forwards propagation from a fresh epicenter to produce a T+0/T+15/T+30
+   * snapshot, without touching Redis state or broadcasting ticks. Used by the
+   * recommendation context aggregator before any interventions exist.
+   */
+  public getCongestionForecast(
+    lat: number,
+    lon: number,
+    initialSeverity: number,
+  ): CongestionForecast {
+    const noIntervention: Interventions = { barricades: [], fleetDeployments: [] }
+    const ticksPerMinute = 2 // tick cadence matches the 30s propagation job
+
+    let state = this.initializeState(lat, lon, initialSeverity)
+    const t0Nodes = Object.keys(state.activeNodes)
+
+    for (let i = 0; i < 15 * ticksPerMinute; i++) {
+      state = this.tick(state, noIntervention, true)
+    }
+    const t15Nodes = Object.keys(state.activeNodes)
+
+    for (let i = 0; i < 15 * ticksPerMinute; i++) {
+      state = this.tick(state, noIntervention, true)
+    }
+    const t30Nodes = Object.keys(state.activeNodes)
+
+    return { t0_nodes: t0Nodes, t15_nodes: t15Nodes, t30_nodes: t30Nodes }
   }
 }
 
