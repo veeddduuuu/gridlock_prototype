@@ -2,9 +2,11 @@ import { Router } from 'express'
 
 import {
   createEvent,
+  getEventAssignments,
   getEventById,
   getEvents,
   planEvent,
+  updateAssignmentStatus,
   updateEvent,
 } from '../controllers/events.controller'
 
@@ -18,5 +20,9 @@ router.post('/', createEvent)
 router.get('/', getEvents)
 router.get('/:id', getEventById)
 router.put('/:id', updateEvent)
+
+// Fleet dispatch and intervention endpoints
+router.get('/:id/assignments', getEventAssignments)
+router.put('/:id/assignments/:assignmentId', updateAssignmentStatus)
 
 export default router

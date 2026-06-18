@@ -2,6 +2,8 @@ import { Queue } from 'bullmq'
 import dotenv from 'dotenv'
 import Redis from 'ioredis'
 
+import { simulationService } from './simulation.service'
+
 dotenv.config()
 
 // Create a reused Redis connection for BullMQ
@@ -38,6 +40,14 @@ export const schedulePropagationJob = async (
   lon: number,
 ) => {
   console.log(`[Queue] Scheduling propagation job for event ${eventId} at ${lat}, ${lon}`)
+
+  // Initialize the Redis state with the nearest junction as the seed_node
+  const stateKey = `propagation_state:${eventId}`
+  const existingState = await redisConnection.get(stateKey)
+  if (!existingState) {
+    const initialState = simulationService.initializeState(lat, lon, initialSeverity)
+    await redisConnection.set(stateKey, JSON.stringify(initialState))
+  }
 
   await propagationQueue.add(
     `propagation-job:${eventId}`,
