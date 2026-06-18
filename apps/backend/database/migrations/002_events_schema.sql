@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS events (
     requires_road_closure BOOLEAN DEFAULT FALSE,
     veh_type VARCHAR(50),
     priority VARCHAR(50),
-    duration_mins INT,
+    duration_mins FLOAT,
     severity_score NUMERIC(5, 2),
     status VARCHAR(50) DEFAULT 'created', -- 'created', 'active', 'monitoring', 'closed', 'reported'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
