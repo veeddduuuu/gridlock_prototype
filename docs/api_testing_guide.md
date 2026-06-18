@@ -1,6 +1,6 @@
 # GridLock API Testing Guide & Schema Analysis
 
-This document provides a detailed breakdown of the GridLock database schema (including exact columns, constraints, and indexes) along with a step-by-step sequence and JSON payloads to run end-to-end tests (including **proactive planning, reactive incident dispatch, fleet check-in lifecycle, barricade interventions, and post-event counterfactual analysis**) using Postman or any HTTP client.
+This document provides a detailed breakdown of the GridLock database schema (including exact columns, constraints, and indexes) along with a step-by-step sequence and JSON payloads to run end-to-end tests (including **proactive planning, reactive incident dispatch, fleet check-in lifecycle, and post-event counterfactual analysis**) using Postman or any HTTP client.
 
 ---
 
@@ -278,23 +278,7 @@ Simulate the officer arriving at the junction. Changing the status to `'on_site'
 
 ---
 
-### Step 8: Deploy Physical Barricade
-Register a barricade at a specific junction. This intervention completely halts congestion propagation to the target node.
-
-- **Method**: `POST`
-- **URL**: `{{baseUrl}}/events/{{activeEventId}}/barricades`
-- **Headers**: `Content-Type: application/json`
-- **Body**:
-  ```json
-  {
-    "junctionId": "ayyappaTempleJunc"
-  }
-  ```
-- **Simulated Impact**: Congestion propagation is blocked at Ayyappa Temple Junc.
-
----
-
-### Step 9: Close Event (Triggers Post-Event Analysis & Counterfactuals)
+### Step 8: Close Event (Triggers Post-Event Analysis & Counterfactuals)
 Updates the event status to `'closed'`, stopping active recurring simulation jobs and calculating policy regrets based on actual vs. simulated outcomes.
 
 - **Method**: `PUT`
@@ -310,14 +294,14 @@ Updates the event status to `'closed'`, stopping active recurring simulation job
 
 ---
 
-### Step 10: Verify Counterfactual Analysis in DB
+### Step 9: Verify Counterfactual Analysis in DB
 Fetch the closed event one final time to evaluate the `"counterfactual"` comparisons.
 
 - **Method**: `GET`
 - **URL**: `{{baseUrl}}/events/{{activeEventId}}`
 - **Expected Fields in Response**:
   - `counterfactual.policy_regret_pct`: Shows the percentage score representing alternative policy effectiveness.
-  - `counterfactual.simulated_no_intervention_duration`: How long the queue would have lasted without our officer check-ins (`on_site`) and barricade placements.
+  - `counterfactual.simulated_no_intervention_duration`: How long the queue would have lasted without our officer check-ins (`on_site`).
 
 ---
 
@@ -331,4 +315,3 @@ GridLock broadcasts all state transitions in real time. Use Postman's **WebSocke
    - `propagation:tick`: Dispatched every 30 seconds showing current active congestion node clusters.
    - `fleet:dispatched`: Received when the event is initially created (Step 4), containing assigned officer IDs.
    - `fleet:status_updated`: Received when updating officer status to `en_route` or `on_site` (Steps 6 & 7).
-   - `barricade:deployed`: Received when a barricade is placed (Step 8).

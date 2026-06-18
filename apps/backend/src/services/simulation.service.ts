@@ -50,13 +50,20 @@ export class SimulationService {
   }
 
   /**
-   * Advances the simulation by one tick using a simple probability-based BFS spread.
+   * Advances the simulation by one tick using a queue spillback and time-weighted spread.
    */
   public tick(
     state: PropagationState,
     interventions: Interventions,
+    timeOfDayOrSilent: string | boolean = '12:00',
+    otherActiveNodes: string[] = [],
     silent = false,
   ): PropagationState {
+    const timeOfDay = typeof timeOfDayOrSilent === 'string' ? timeOfDayOrSilent : '12:00'
+    if (typeof timeOfDayOrSilent === 'boolean') {
+      silent = timeOfDayOrSilent
+    }
+
     const newState: PropagationState = {
       activeNodes: { ...state.activeNodes },
       currentTick: state.currentTick + 1,
@@ -82,12 +89,24 @@ export class SimulationService {
 
         // Check if neighbor is already active
         if (!newState.activeNodes[neighborId]) {
-          // Simple probability check to see if congestion spreads
-          // We use the edge's cascadeProbability multiplied by current intensity
-          const spreadChance = edge.cascadeProbability * nodeData.intensity
+          let spreadChance = graphService.getEdgeWeight(nodeId, neighborId, timeOfDay) * nodeData.intensity
+          let childIntensity = nodeData.intensity * 0.8
+
+          // Multi-event merging
+          if (otherActiveNodes.includes(neighborId)) {
+             spreadChance = 1.0 // guaranteed merge
+             childIntensity = Math.min(1.0, childIntensity + 0.5) // GridLock condition spike
+             console.log(`[Simulation] GRIDLOCK MERGE at ${neighborId}`)
+          }
+
+          // Queue Spillback
+          if (nodeData.intensity >= 1.0) {
+            spreadChance = 1.0
+            console.log(`[Simulation] QUEUE SPILLBACK from ${nodeId} -> ${neighborId}`)
+          }
+
           const roll = Math.random()
           if (roll < spreadChance) {
-            const childIntensity = nodeData.intensity * 0.8
             newState.activeNodes[neighborId] = {
               intensity: childIntensity,
               discoveredAtTick: newState.currentTick,
@@ -110,9 +129,9 @@ export class SimulationService {
     for (const nodeId of Object.keys(newState.activeNodes)) {
       let decayFactor = 0.05 // Base decay per tick
 
-      // If fleet is deployed at this node, recovery is much faster
+      // If fleet is deployed at this node, recovery is 1.5x faster
       if (interventions.fleetDeployments.includes(nodeId)) {
-        decayFactor = 0.15
+        decayFactor *= 1.5
       }
 
       newState.activeNodes[nodeId].intensity -= decayFactor

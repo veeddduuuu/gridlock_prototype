@@ -4,6 +4,7 @@ import { findConflicts } from '../services/conflict.service'
 import { graphService } from '../services/graph.service'
 import {
   publishWsEvent,
+  redisConnection,
   removePropagationJob,
   schedulePropagationJob,
 } from '../services/queue.service'
@@ -820,6 +821,106 @@ export const updateEvent = async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error('Error updating event:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export const getEventAssignments = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = await query(
+      `SELECT fa.*, u.name as user_name, u.email as user_email 
+       FROM fleet_assignments fa
+       JOIN users u ON fa.user_id = u.id
+       WHERE fa.event_id = $1
+       ORDER BY fa.created_at ASC`,
+      [id],
+    )
+    res.json({ assignments: result.rows })
+  } catch (error) {
+    console.error('Error fetching event assignments:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export const updateAssignmentStatus = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId, assignmentId } = req.params
+    const { status } = req.body
+
+    const validStatuses = ['pending', 'en_route', 'on_site', 'completed', 'blocked']
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` })
+    }
+
+    const result = await query(
+      `UPDATE fleet_assignments 
+       SET status = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND event_id = $3
+       RETURNING *`,
+      [status, assignmentId, eventId],
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Assignment not found for this event' })
+    }
+
+    const updatedAssignment = result.rows[0]
+
+    // If status is updated to 'on_site', register the fleet deployment in the simulation
+    if (status === 'on_site') {
+      const junctionName = updatedAssignment.junction_name
+      // Find the junction ID by name
+      const nameToJunction = new Map(
+        Array.from(graphService.junctions.values()).map((j) => [j.name.toLowerCase(), j]),
+      )
+      const junction = nameToJunction.get(junctionName.toLowerCase())
+
+      if (junction) {
+        const junctionId = junction.id
+        const stateKey = `interventions:${eventId}`
+        const interventionsStr = await redisConnection.get(stateKey)
+        const interventions = interventionsStr
+          ? JSON.parse(interventionsStr)
+          : { barricades: [], fleetDeployments: [] }
+
+        if (!interventions.fleetDeployments.includes(junctionId)) {
+          interventions.fleetDeployments.push(junctionId)
+          await redisConnection.set(stateKey, JSON.stringify(interventions))
+        }
+
+        // Publish to Redis channel so the worker cache updates
+        await redisConnection.publish(
+          'gridlock:interventions',
+          JSON.stringify({
+            event: 'fleet_deployed',
+            data: {
+              eventId,
+              nodeId: junctionId,
+            },
+          }),
+        )
+
+        console.log(`[Fleet] Registered fleet deployment at junction ${junctionId} for event ${eventId}`)
+      } else {
+        console.warn(`[Fleet] Junction named "${junctionName}" not found in graph service`)
+      }
+    }
+
+    // Broadcast update over WebSockets
+    await publishWsEvent('fleet:status_updated', {
+      eventId,
+      assignmentId,
+      status,
+      junctionName: updatedAssignment.junction_name,
+    })
+
+    res.json({
+      message: 'Assignment status updated successfully',
+      assignment: updatedAssignment,
+    })
+  } catch (error) {
+    console.error('Error updating assignment status:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 }
