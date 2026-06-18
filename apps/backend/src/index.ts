@@ -7,6 +7,7 @@ import Redis from 'ioredis';
 
 import healthRoutes from './routes/health';
 import eventsRoutes from './routes/events.routes';
+import graphRoutes from './routes/graph.routes';
 
 import './workers/propagation.worker';
 
@@ -21,6 +22,7 @@ app.use(express.json());
 
 app.use('/api/health', healthRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/graph', graphRoutes);
 
 const subscriberRedis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 subscriberRedis.subscribe('gridlock:events', (err, count) => {
