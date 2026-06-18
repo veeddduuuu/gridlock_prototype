@@ -1,80 +1,94 @@
-import { useState, useEffect, useCallback } from 'react';
-import Header from './components/Header';
-import PlanEventForm from './components/PlanEventForm';
-import MapView from './components/MapView';
-import PipelinePanel from './components/PipelinePanel';
-import EventList from './components/EventList';
-import { useWebSocket } from './hooks/useWebSocket';
-import { planEvent, getEvents } from './utils/api';
-import type { PlanEventPayload, PipelineResult, PlannedEvent } from './types';
-import 'leaflet/dist/leaflet.css';
-import './App.css';
+import 'leaflet/dist/leaflet.css'
+import './App.css'
 
-type View = 'form' | 'results';
+import { useCallback, useEffect, useState } from 'react'
+
+import EventList from './components/EventList'
+import Header from './components/Header'
+import MapView from './components/MapView'
+import PipelinePanel from './components/PipelinePanel'
+import PlanEventForm from './components/PlanEventForm'
+import { useWebSocket } from './hooks/useWebSocket'
+import type { PipelineResult, PlanEventPayload, PlannedEvent } from './types'
+import { getEvents, planEvent } from './utils/api'
+
+type View = 'form' | 'results'
 
 function App() {
-  const [view, setView] = useState<View>('form');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
-  const [events, setEvents] = useState<PlannedEvent[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<PlannedEvent | null>(null);
-  const [eventLat, setEventLat] = useState<number | undefined>();
-  const [eventLon, setEventLon] = useState<number | undefined>();
-  const [clock, setClock] = useState(new Date());
+  const [view, setView] = useState<View>('form')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null)
+  const [events, setEvents] = useState<PlannedEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<PlannedEvent | null>(null)
+  const [eventLat, setEventLat] = useState<number | undefined>()
+  const [eventLon, setEventLon] = useState<number | undefined>()
+  const [clock, setClock] = useState(new Date())
 
-  const { connected, lastTick } = useWebSocket();
+  const { connected, lastTick } = useWebSocket()
 
   // Clock tick
   useEffect(() => {
-    const interval = setInterval(() => setClock(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+    const interval = setInterval(() => setClock(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Load events on mount
   const fetchEvents = useCallback(async () => {
     try {
-      const evts = await getEvents();
-      setEvents(evts);
+      const evts = await getEvents()
+      setEvents(evts)
     } catch {
       // Backend may not be running
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    fetchEvents();
-    const interval = setInterval(fetchEvents, 30000);
-    return () => clearInterval(interval);
-  }, [fetchEvents]);
+    const load = () => {
+      getEvents()
+        .then(setEvents)
+        .catch(() => {})
+    }
+    load()
+    const interval = setInterval(load, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handlePlanSubmit = async (payload: PlanEventPayload) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     try {
-      const { pipeline } = await planEvent(payload);
-      setPipelineResult(pipeline);
-      setEventLat(payload.lat);
-      setEventLon(payload.lon);
-      setView('results');
-      fetchEvents();
+      const { pipeline } = await planEvent(payload)
+      setPipelineResult(pipeline)
+      setEventLat(payload.lat)
+      setEventLon(payload.lon)
+      setView('results')
+      fetchEvents()
     } catch (err: any) {
-      setError(err.message || 'Failed to plan event');
+      setError(err.message || 'Failed to plan event')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleEventSelect = (ev: PlannedEvent) => {
-    setSelectedEvent(ev);
-    setEventLat(ev.lat);
-    setEventLon(ev.lon);
+    setSelectedEvent(ev)
+    setEventLat(ev.lat)
+    setEventLon(ev.lon)
     // Reconstruct pipeline result from stored event data
     if (ev.deployment_plan && ev.risk_level) {
       setPipelineResult({
         prediction: {
           duration_mins: ev.predicted_duration_mins,
           severity_score: ev.severity_score,
-          severity_label: ev.severity_score > 0.85 ? 'Critical' : ev.severity_score > 0.6 ? 'High' : ev.severity_score > 0.3 ? 'Medium' : 'Low',
+          severity_label:
+            ev.severity_score > 0.85
+              ? 'Critical'
+              : ev.severity_score > 0.6
+                ? 'High'
+                : ev.severity_score > 0.3
+                  ? 'Medium'
+                  : 'Low',
           confidence: 0.7,
         },
         queue_analysis: {
@@ -88,7 +102,11 @@ function App() {
           effective_arrival_rate: 0,
         },
         deployment_plan: ev.deployment_plan,
-        gating_plan: ev.gating_plan || { risk_level: ev.risk_level, blocking_probability: ev.blocking_probability, recommendations: [] },
+        gating_plan: ev.gating_plan || {
+          risk_level: ev.risk_level,
+          blocking_probability: ev.blocking_probability,
+          recommendations: [],
+        },
         similar_incidents: [],
         propagation_forecast: {},
         prestaging_timeline: ev.prestaging_timeline || [],
@@ -101,34 +119,28 @@ function App() {
           model_source: 'stored',
           context: '',
         },
-      });
-      setView('results');
+      })
+      setView('results')
     }
-  };
+  }
 
   const handleBackToForm = () => {
-    setView('form');
-    setPipelineResult(null);
-    setSelectedEvent(null);
-  };
+    setView('form')
+    setPipelineResult(null)
+    setSelectedEvent(null)
+  }
 
-  const activeEvents = events.filter((e) => e.status === 'planned' || e.status === 'active');
+  const activeEvents = events.filter((e) => e.status === 'planned' || e.status === 'active')
 
   return (
     <div className="app">
-      <Header
-        wsConnected={connected}
-        activeEvents={activeEvents.length}
-      />
+      <Header wsConnected={connected} activeEvents={activeEvents.length} />
 
       <div className="main-layout">
         {/* Left Panel */}
         <aside className="left-panel">
           <div className="panel-tabs">
-            <button
-              className={`tab ${view === 'form' ? 'active' : ''}`}
-              onClick={handleBackToForm}
-            >
+            <button className={`tab ${view === 'form' ? 'active' : ''}`} onClick={handleBackToForm}>
               Plan Event
             </button>
             <button
@@ -177,7 +189,7 @@ function App() {
         </main>
       </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

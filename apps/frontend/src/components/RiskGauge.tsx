@@ -1,8 +1,8 @@
 interface Props {
-  riskLevel: string;
-  blockingProbability: number;
-  queueLength: number;
-  spilloverTime: number;
+  riskLevel: string
+  blockingProbability: number
+  queueLength: number
+  spilloverTime: number
 }
 
 const RISK_COLORS: Record<string, string> = {
@@ -11,11 +11,16 @@ const RISK_COLORS: Record<string, string> = {
   orange: '#f97316',
   red: '#ef4444',
   critical: '#dc2626',
-};
+}
 
-export default function RiskGauge({ riskLevel, blockingProbability, queueLength, spilloverTime }: Props) {
-  const color = RISK_COLORS[riskLevel] || '#6b7280';
-  const angle = Math.min(blockingProbability, 1) * 180;
+export default function RiskGauge({
+  riskLevel,
+  blockingProbability,
+  queueLength,
+  spilloverTime,
+}: Props) {
+  const color = RISK_COLORS[riskLevel] || '#6b7280'
+  const angle = Math.min(blockingProbability, 1) * 180
 
   return (
     <div className="risk-gauge-card">
@@ -59,9 +64,7 @@ export default function RiskGauge({ riskLevel, blockingProbability, queueLength,
         </svg>
       </div>
 
-      <div className={`risk-badge risk-${riskLevel}`}>
-        {riskLevel.toUpperCase()} RISK
-      </div>
+      <div className={`risk-badge risk-${riskLevel}`}>{riskLevel.toUpperCase()} RISK</div>
 
       <div className="gauge-stats">
         <div className="gauge-stat">
@@ -76,5 +79,5 @@ export default function RiskGauge({ riskLevel, blockingProbability, queueLength,
         </div>
       </div>
     </div>
-  );
+  )
 }

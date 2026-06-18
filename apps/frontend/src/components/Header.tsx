@@ -1,8 +1,8 @@
-import { Shield, Wifi, WifiOff, Activity } from 'lucide-react';
+import { Activity, Shield, Wifi, WifiOff } from 'lucide-react'
 
 interface HeaderProps {
-  wsConnected: boolean;
-  activeEvents: number;
+  wsConnected: boolean
+  activeEvents: number
 }
 
 export default function Header({ wsConnected, activeEvents }: HeaderProps) {
@@ -31,5 +31,5 @@ export default function Header({ wsConnected, activeEvents }: HeaderProps) {
         </div>
       </div>
     </header>
-  );
+  )
 }

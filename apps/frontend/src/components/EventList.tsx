@@ -1,10 +1,11 @@
-import { Clock, AlertTriangle, MapPin, ChevronRight } from 'lucide-react';
-import type { PlannedEvent } from '../types';
+import { AlertTriangle, ChevronRight, Clock, MapPin } from 'lucide-react'
+
+import type { PlannedEvent } from '../types'
 
 interface Props {
-  events: PlannedEvent[];
-  selectedId: string | null;
-  onSelect: (event: PlannedEvent) => void;
+  events: PlannedEvent[]
+  selectedId: string | null
+  onSelect: (event: PlannedEvent) => void
 }
 
 const RISK_COLORS: Record<string, string> = {
@@ -13,7 +14,7 @@ const RISK_COLORS: Record<string, string> = {
   orange: '#f97316',
   red: '#ef4444',
   critical: '#dc2626',
-};
+}
 
 export default function EventList({ events, selectedId, onSelect }: Props) {
   if (events.length === 0) {
@@ -23,18 +24,22 @@ export default function EventList({ events, selectedId, onSelect }: Props) {
         <p>No planned events</p>
         <span>Use the form above to plan a new event</span>
       </div>
-    );
+    )
   }
 
   return (
     <div className="event-list">
       {events.map((ev) => {
-        const riskColor = RISK_COLORS[ev.risk_level] || '#6b7280';
-        const startTime = new Date(ev.start_datetime);
+        const riskColor = RISK_COLORS[ev.risk_level] || '#6b7280'
+        const startTime = new Date(ev.start_datetime)
         const timeStr = startTime.toLocaleString('en-IN', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
-        });
-        const isSelected = ev.id === selectedId;
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+        const isSelected = ev.id === selectedId
 
         return (
           <div
@@ -49,8 +54,12 @@ export default function EventList({ events, selectedId, onSelect }: Props) {
             </div>
             <div className="event-card-name">{ev.name || ev.category}</div>
             <div className="event-card-meta">
-              <span><Clock size={12} /> {timeStr}</span>
-              <span><MapPin size={12} /> {ev.lat?.toFixed(4)}, {ev.lon?.toFixed(4)}</span>
+              <span>
+                <Clock size={12} /> {timeStr}
+              </span>
+              <span>
+                <MapPin size={12} /> {ev.lat?.toFixed(4)}, {ev.lon?.toFixed(4)}
+              </span>
             </div>
             <div className="event-card-bottom">
               <span className="event-duration">
@@ -62,8 +71,8 @@ export default function EventList({ events, selectedId, onSelect }: Props) {
               <ChevronRight size={14} className="event-chevron" />
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

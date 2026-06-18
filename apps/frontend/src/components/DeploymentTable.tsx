@@ -1,8 +1,9 @@
-import { Users, Construction } from 'lucide-react';
-import type { DeploymentPlan } from '../types';
+import { Construction, Users } from 'lucide-react'
+
+import type { DeploymentPlan } from '../types'
 
 interface Props {
-  plan: DeploymentPlan;
+  plan: DeploymentPlan
 }
 
 export default function DeploymentTable({ plan }: Props) {
@@ -43,5 +44,5 @@ export default function DeploymentTable({ plan }: Props) {
         ))}
       </div>
     </div>
-  );
+  )
 }

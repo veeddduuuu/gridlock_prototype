@@ -1,26 +1,51 @@
-import { useState } from 'react';
-import { Send, MapPin, Calendar, AlertTriangle, ChevronDown } from 'lucide-react';
-import type { PlanEventPayload } from '../types';
+import { AlertTriangle, Calendar, ChevronDown, MapPin, Send } from 'lucide-react'
+import { useState } from 'react'
+
+import type { PlanEventPayload } from '../types'
 
 const CORRIDORS = [
-  'Outer Ring Road', 'Hosur Road', 'Bellary Road 1', 'Bellary Road 2',
-  'Old Madras Road', 'Mysore Road', 'Tumkur Road', 'Bannerghata Road',
-  'Magadi Road', 'Old Airport Road', 'Hennur Main Road', 'Varthur Road',
-  'West of Chord Road', 'ORR East 1', 'ORR East 2', 'ORR North 1',
-  'ORR North 2', 'ORR West 1', 'CBD 2', 'Non-corridor',
-];
+  'Outer Ring Road',
+  'Hosur Road',
+  'Bellary Road 1',
+  'Bellary Road 2',
+  'Old Madras Road',
+  'Mysore Road',
+  'Tumkur Road',
+  'Bannerghata Road',
+  'Magadi Road',
+  'Old Airport Road',
+  'Hennur Main Road',
+  'Varthur Road',
+  'West of Chord Road',
+  'ORR East 1',
+  'ORR East 2',
+  'ORR North 1',
+  'ORR North 2',
+  'ORR West 1',
+  'CBD 2',
+  'Non-corridor',
+]
 
 const CATEGORIES = [
-  'Accident', 'Protest', 'VIP Movement', 'Water Logging', 'Tree Fall',
-  'Public Event', 'Procession', 'Construction', 'Congestion',
-  'Vehicle Breakdown', 'Road Conditions', 'Others',
-];
+  'Accident',
+  'Protest',
+  'VIP Movement',
+  'Water Logging',
+  'Tree Fall',
+  'Public Event',
+  'Procession',
+  'Construction',
+  'Congestion',
+  'Vehicle Breakdown',
+  'Road Conditions',
+  'Others',
+]
 
-const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+const PRIORITIES = ['Low', 'Medium', 'High', 'Critical']
 
 interface Props {
-  onSubmit: (payload: PlanEventPayload) => void;
-  loading: boolean;
+  onSubmit: (payload: PlanEventPayload) => void
+  loading: boolean
 }
 
 export default function PlanEventForm({ onSubmit, loading }: Props) {
@@ -36,23 +61,24 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
     requires_road_closure: false,
     expected_crowd_size: 0,
     type: 'unplanned',
-  });
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     onSubmit({
       ...form,
       affected_corridors: [form.corridor],
-    });
-  };
+    })
+  }
 
-  const update = (field: string, value: any) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const update = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }))
 
   return (
     <form className="plan-form" onSubmit={handleSubmit}>
       <div className="form-section">
-        <h3><AlertTriangle size={16} /> Incident Details</h3>
+        <h3>
+          <AlertTriangle size={16} /> Incident Details
+        </h3>
         <div className="form-row">
           <div className="form-group">
             <label>Event Name</label>
@@ -70,7 +96,11 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
             <label>Category</label>
             <div className="select-wrap">
               <select value={form.category} onChange={(e) => update('category', e.target.value)}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
               <ChevronDown size={14} />
             </div>
@@ -116,13 +146,19 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       </div>
 
       <div className="form-section">
-        <h3><MapPin size={16} /> Location</h3>
+        <h3>
+          <MapPin size={16} /> Location
+        </h3>
         <div className="form-row">
           <div className="form-group">
             <label>Corridor</label>
             <div className="select-wrap">
               <select value={form.corridor} onChange={(e) => update('corridor', e.target.value)}>
-                {CORRIDORS.map((c) => <option key={c} value={c}>{c}</option>)}
+                {CORRIDORS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
               <ChevronDown size={14} />
             </div>
@@ -151,7 +187,9 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
       </div>
 
       <div className="form-section">
-        <h3><Calendar size={16} /> Timing</h3>
+        <h3>
+          <Calendar size={16} /> Timing
+        </h3>
         <div className="form-row">
           <div className="form-group">
             <label>Start Date & Time</label>
@@ -188,5 +226,5 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
         )}
       </button>
     </form>
-  );
+  )
 }

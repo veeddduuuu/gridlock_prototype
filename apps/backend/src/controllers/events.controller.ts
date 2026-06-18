@@ -1,10 +1,11 @@
-import { Request, Response } from 'express';
-import { query } from '../utils/db';
-import { schedulePropagationJob, removePropagationJob } from '../services/queue.service';
-import { graphService } from '../services/graph.service';
-import { simulationService } from '../services/simulation.service';
+import { Request, Response } from 'express'
 
-const ML_BASE = process.env.ML_URL || 'http://localhost:8000';
+import { graphService } from '../services/graph.service'
+import { removePropagationJob, schedulePropagationJob } from '../services/queue.service'
+import { simulationService } from '../services/simulation.service'
+import { query } from '../utils/db'
+
+const ML_BASE = process.env.ML_URL || 'http://localhost:8000'
 
 /**
  * Call ML prediction endpoint.
@@ -25,10 +26,10 @@ async function callMLPredict(eventData: any) {
         confidence: data.confidence,
         similar_events: data.similar_events || [],
         aggregated: data.aggregated || null,
-      };
+      }
     }
   } catch (error) {
-    console.log('[ML] Predict endpoint not reachable, using stubbed values.');
+    console.log('[ML] Predict endpoint not reachable, using stubbed values.')
   }
   return {
     duration_mins: 87,
@@ -37,28 +38,28 @@ async function callMLPredict(eventData: any) {
     confidence: 0.5,
     similar_events: [],
     aggregated: null,
-  };
+  }
 }
 
 /**
  * Call ML queueing analysis endpoint.
  */
 async function callQueueAnalysis(params: {
-  predicted_duration_mins: number;
-  corridor: string;
-  event_cause: string;
-  hour: number;
-  requires_road_closure: boolean;
+  predicted_duration_mins: number
+  corridor: string
+  event_cause: string
+  hour: number
+  requires_road_closure: boolean
 }) {
   try {
     const response = await fetch(`${ML_BASE}/api/ml/queue-analysis`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-    });
-    if (response.ok) return await response.json();
+    })
+    if (response.ok) return await response.json()
   } catch (error) {
-    console.log('[ML] Queue analysis endpoint not reachable, using defaults.');
+    console.log('[ML] Queue analysis endpoint not reachable, using defaults.')
   }
   return {
     blocking_probability: 0.5,
@@ -69,7 +70,7 @@ async function callQueueAnalysis(params: {
     utilization: 0.8,
     effective_service_rate: 20,
     effective_arrival_rate: 30,
-  };
+  }
 }
 
 /**
@@ -85,12 +86,12 @@ async function callDeployment(junctions: any[], officers: number, barricades: nu
         available_officers: officers,
         available_barricades: barricades,
       }),
-    });
-    if (response.ok) return await response.json();
+    })
+    if (response.ok) return await response.json()
   } catch (error) {
-    console.log('[ML] Deployment endpoint not reachable.');
+    console.log('[ML] Deployment endpoint not reachable.')
   }
-  return { recommendations: [], total_officers_deployed: 0, total_barricades_deployed: 0 };
+  return { recommendations: [], total_officers_deployed: 0, total_barricades_deployed: 0 }
 }
 
 /**
@@ -102,32 +103,32 @@ async function callGating(params: any) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-    });
-    if (response.ok) return await response.json();
+    })
+    if (response.ok) return await response.json()
   } catch (error) {
-    console.log('[ML] Gating endpoint not reachable.');
+    console.log('[ML] Gating endpoint not reachable.')
   }
-  return { risk_level: 'yellow', blocking_probability: 0.5, recommendations: [] };
+  return { risk_level: 'yellow', blocking_probability: 0.5, recommendations: [] }
 }
 
 /**
  * Call ML anomaly detection endpoint.
  */
 async function callAnomalyDetection(params: {
-  corridor: string;
-  event_cause: string;
-  start_datetime: string;
-  predicted_duration_mins: number;
+  corridor: string
+  event_cause: string
+  start_datetime: string
+  predicted_duration_mins: number
 }) {
   try {
     const response = await fetch(`${ML_BASE}/api/ml/anomaly`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-    });
-    if (response.ok) return await response.json();
+    })
+    if (response.ok) return await response.json()
   } catch (error) {
-    console.log('[ML] Anomaly detection endpoint not reachable.');
+    console.log('[ML] Anomaly detection endpoint not reachable.')
   }
   return {
     anomaly_score: 0.0,
@@ -136,34 +137,34 @@ async function callAnomalyDetection(params: {
     deviation_pct: 0.0,
     model_source: 'none',
     context: 'Anomaly detection unavailable',
-  };
+  }
 }
 
 /**
  * Call ML counterfactual analysis endpoint.
  */
 async function callCounterfactual(params: {
-  event_id: string;
-  predicted_duration_mins: number;
-  actual_duration_mins: number;
-  corridor: string;
-  event_cause: string;
-  start_datetime: string;
-  officers_deployed: number;
-  barricades_deployed: number;
-  gating_applied: boolean;
+  event_id: string
+  predicted_duration_mins: number
+  actual_duration_mins: number
+  corridor: string
+  event_cause: string
+  start_datetime: string
+  officers_deployed: number
+  barricades_deployed: number
+  gating_applied: boolean
 }) {
   try {
     const response = await fetch(`${ML_BASE}/api/ml/counterfactual`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-    });
-    if (response.ok) return await response.json();
+    })
+    if (response.ok) return await response.json()
   } catch (error) {
-    console.log('[ML] Counterfactual endpoint not reachable.');
+    console.log('[ML] Counterfactual endpoint not reachable.')
   }
-  return null;
+  return null
 }
 
 /**
@@ -175,8 +176,8 @@ function buildPrestagingTimeline(
   riskLevel: string,
   deploymentPlan: any,
 ) {
-  const start = new Date(startDatetime);
-  const timeline = [];
+  const start = new Date(startDatetime)
+  const timeline = []
 
   // T-60 min: Alert & initial briefing
   timeline.push({
@@ -185,14 +186,14 @@ function buildPrestagingTimeline(
     action: 'ALERT_BRIEFING',
     title: 'Command Alert & Briefing',
     description: `Incident planning alert issued. Predicted duration: ${durationMins} min. Risk: ${riskLevel.toUpperCase()}. Brief all deployed units.`,
-  });
+  })
 
   // T-45 min: Deploy barricades
   if (deploymentPlan?.recommendations?.length > 0) {
     const barricadeJunctions = deploymentPlan.recommendations
       .filter((r: any) => r.barricades > 0)
       .map((r: any) => `${r.junction_name} (${r.barricades})`)
-      .join(', ');
+      .join(', ')
     if (barricadeJunctions) {
       timeline.push({
         offset_mins: -45,
@@ -200,7 +201,7 @@ function buildPrestagingTimeline(
         action: 'DEPLOY_BARRICADES',
         title: 'Physical Barricade Deployment',
         description: `Deploy barricades at: ${barricadeJunctions}`,
-      });
+      })
     }
   }
 
@@ -211,7 +212,7 @@ function buildPrestagingTimeline(
     action: 'DEPLOY_OFFICERS',
     title: 'Officer Deployment & Signal Adjustment',
     description: `Deploy traffic officers to assigned junctions. Activate perimeter gating at boundary intersections.`,
-  });
+  })
 
   // T-15 min: Final check
   timeline.push({
@@ -219,8 +220,9 @@ function buildPrestagingTimeline(
     time: new Date(start.getTime() - 15 * 60000).toISOString(),
     action: 'FINAL_CHECK',
     title: 'Final Readiness Check',
-    description: 'Confirm all units in position. Verify diversion signage. Test communication channels.',
-  });
+    description:
+      'Confirm all units in position. Verify diversion signage. Test communication channels.',
+  })
 
   // T-0: Event starts
   timeline.push({
@@ -229,7 +231,7 @@ function buildPrestagingTimeline(
     action: 'EVENT_START',
     title: 'Event Begins — Active Monitoring',
     description: 'Switch to real-time monitoring mode. Propagation simulation active.',
-  });
+  })
 
   // T+duration: Expected clearance
   timeline.push({
@@ -238,37 +240,37 @@ function buildPrestagingTimeline(
     action: 'EXPECTED_CLEARANCE',
     title: 'Expected Clearance',
     description: `Predicted incident clearance at T+${durationMins} min. Begin stand-down assessment.`,
-  });
+  })
 
-  return timeline;
+  return timeline
 }
 
 /**
  * Run forward propagation simulation for T+5, T+15, T+30 minute forecasts.
  */
 function runPropagationForecast(lat: number, lon: number, severity: number) {
-  const state = simulationService.initializeState(lat, lon, severity);
-  const forecasts: Record<string, any> = {};
+  const state = simulationService.initializeState(lat, lon, severity)
+  const forecasts: Record<string, any> = {}
 
-  let currentState = state;
+  let currentState = state
   // Each tick = 30 seconds, so T+5min = 10 ticks, T+15min = 30 ticks, T+30min = 60 ticks
   const checkpoints = [
     { label: 'T+5min', ticks: 10 },
     { label: 'T+15min', ticks: 30 },
     { label: 'T+30min', ticks: 60 },
-  ];
+  ]
 
-  let ticksSoFar = 0;
+  let ticksSoFar = 0
   for (const cp of checkpoints) {
-    const ticksNeeded = cp.ticks - ticksSoFar;
+    const ticksNeeded = cp.ticks - ticksSoFar
     for (let i = 0; i < ticksNeeded; i++) {
-      currentState = simulationService.tick(currentState, { barricades: [], fleetDeployments: [] });
+      currentState = simulationService.tick(currentState, { barricades: [], fleetDeployments: [] })
     }
-    ticksSoFar = cp.ticks;
-    forecasts[cp.label] = { ...currentState };
+    ticksSoFar = cp.ticks
+    forecasts[cp.label] = { ...currentState }
   }
 
-  return forecasts;
+  return forecasts
 }
 
 /**
@@ -299,13 +301,16 @@ export const planEvent = async (req: Request, res: Response) => {
       requires_road_closure,
       veh_type,
       priority,
-    } = req.body;
+    } = req.body
 
-    const corridor = Array.isArray(affected_corridors) && affected_corridors.length > 0
-      ? affected_corridors[0]
-      : (typeof affected_corridors === 'string' ? affected_corridors : 'Non-corridor');
+    const corridor =
+      Array.isArray(affected_corridors) && affected_corridors.length > 0
+        ? affected_corridors[0]
+        : typeof affected_corridors === 'string'
+          ? affected_corridors
+          : 'Non-corridor'
 
-    const eventHour = new Date(start_datetime).getHours();
+    const eventHour = new Date(start_datetime).getHours()
 
     // 1. Insert event record with status 'planned'
     const insertQuery = `
@@ -315,14 +320,24 @@ export const planEvent = async (req: Request, res: Response) => {
         requires_road_closure, veh_type, priority, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'planned')
       RETURNING id
-    `;
+    `
     const insertResult = await query(insertQuery, [
-      type, category, name, description, lat, lon, expected_crowd_size,
-      start_datetime, expected_end_datetime, affected_corridors,
-      requires_road_closure || false, veh_type, priority,
-    ]);
-    const eventId = insertResult.rows[0].id;
-    console.log(`[Plan] Created planned event ${eventId}: ${category} on ${corridor}`);
+      type,
+      category,
+      name,
+      description,
+      lat,
+      lon,
+      expected_crowd_size,
+      start_datetime,
+      expected_end_datetime,
+      affected_corridors,
+      requires_road_closure || false,
+      veh_type,
+      priority,
+    ])
+    const eventId = insertResult.rows[0].id
+    console.log(`[Plan] Created planned event ${eventId}: ${category} on ${corridor}`)
 
     // 2. ML Prediction
     const mlResult = await callMLPredict({
@@ -337,8 +352,10 @@ export const planEvent = async (req: Request, res: Response) => {
       veh_type: veh_type || '',
       police_station: '',
       zone: '',
-    });
-    console.log(`[Plan] ML prediction: ${mlResult.duration_mins} min, severity=${mlResult.severity_score}`);
+    })
+    console.log(
+      `[Plan] ML prediction: ${mlResult.duration_mins} min, severity=${mlResult.severity_score}`,
+    )
 
     // 3. Queueing Analysis
     const queueResult = await callQueueAnalysis({
@@ -347,8 +364,10 @@ export const planEvent = async (req: Request, res: Response) => {
       event_cause: category,
       hour: eventHour,
       requires_road_closure: requires_road_closure || false,
-    });
-    console.log(`[Plan] Queue analysis: risk=${queueResult.risk_level}, P_block=${queueResult.blocking_probability}`);
+    })
+    console.log(
+      `[Plan] Queue analysis: risk=${queueResult.risk_level}, P_block=${queueResult.blocking_probability}`,
+    )
 
     // 3b. Anomaly Detection
     const anomalyResult = await callAnomalyDetection({
@@ -356,18 +375,20 @@ export const planEvent = async (req: Request, res: Response) => {
       event_cause: category,
       start_datetime,
       predicted_duration_mins: mlResult.duration_mins,
-    });
-    console.log(`[Plan] Anomaly: score=${anomalyResult.anomaly_score}, label=${anomalyResult.anomaly_label}`);
+    })
+    console.log(
+      `[Plan] Anomaly: score=${anomalyResult.anomaly_score}, label=${anomalyResult.anomaly_label}`,
+    )
 
     // 4. Propagation Forecast
-    const propagationForecast = runPropagationForecast(lat, lon, mlResult.severity_score);
-    console.log(`[Plan] Propagation forecast computed for T+5, T+15, T+30`);
+    const propagationForecast = runPropagationForecast(lat, lon, mlResult.severity_score)
+    console.log(`[Plan] Propagation forecast computed for T+5, T+15, T+30`)
 
     // 5. Resource Deployment Plan
     // Build junction list from graph neighbors of nearest junction
-    const nearest = graphService.getNearestJunction(lat, lon);
-    const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : [];
-    const junctionsForDeployment = [];
+    const nearest = graphService.getNearestJunction(lat, lon)
+    const neighborEdges = nearest ? graphService.getNeighbors(nearest.id) : []
+    const junctionsForDeployment = []
 
     if (nearest) {
       junctionsForDeployment.push({
@@ -376,10 +397,10 @@ export const planEvent = async (req: Request, res: Response) => {
         congestion_score: mlResult.severity_score,
         traffic_volume: 1.5,
         is_diversion_point: false,
-      });
+      })
     }
     for (const edge of neighborEdges) {
-      const neighbor = graphService.junctions.get(edge.target);
+      const neighbor = graphService.junctions.get(edge.target)
       if (neighbor) {
         junctionsForDeployment.push({
           id: neighbor.id,
@@ -387,22 +408,24 @@ export const planEvent = async (req: Request, res: Response) => {
           congestion_score: mlResult.severity_score * edge.cascadeProbability,
           traffic_volume: 1.0,
           is_diversion_point: true,
-        });
+        })
       }
     }
 
-    const deploymentPlan = await callDeployment(junctionsForDeployment, 10, 8);
-    console.log(`[Plan] Deployment: ${deploymentPlan.total_officers_deployed} officers, ${deploymentPlan.total_barricades_deployed} barricades`);
+    const deploymentPlan = await callDeployment(junctionsForDeployment, 10, 8)
+    console.log(
+      `[Plan] Deployment: ${deploymentPlan.total_officers_deployed} officers, ${deploymentPlan.total_barricades_deployed} barricades`,
+    )
 
     // 6. Advisory Gating
-    const upstreamJunctions = neighborEdges.map(edge => {
-      const j = graphService.junctions.get(edge.target);
+    const upstreamJunctions = neighborEdges.map((edge) => {
+      const j = graphService.junctions.get(edge.target)
       return {
         id: edge.target,
         name: j?.name || edge.target,
         green_time_secs: 60,
-      };
-    });
+      }
+    })
 
     const gatingPlan = await callGating({
       predicted_duration_mins: mlResult.duration_mins,
@@ -411,8 +434,10 @@ export const planEvent = async (req: Request, res: Response) => {
       hour: eventHour,
       requires_road_closure: requires_road_closure || false,
       upstream_junctions: upstreamJunctions,
-    });
-    console.log(`[Plan] Gating: ${gatingPlan.recommendations.length} signal adjustments recommended`);
+    })
+    console.log(
+      `[Plan] Gating: ${gatingPlan.recommendations.length} signal adjustments recommended`,
+    )
 
     // 7. Pre-staging Timeline
     const prestagingTimeline = buildPrestagingTimeline(
@@ -420,7 +445,7 @@ export const planEvent = async (req: Request, res: Response) => {
       mlResult.duration_mins,
       queueResult.risk_level,
       deploymentPlan,
-    );
+    )
 
     // 8. Update DB with all pipeline results
     const updateQuery = `
@@ -442,7 +467,7 @@ export const planEvent = async (req: Request, res: Response) => {
         status = 'planned'
       WHERE id = $15
       RETURNING *
-    `;
+    `
     const updateResult = await query(updateQuery, [
       mlResult.duration_mins,
       mlResult.duration_mins,
@@ -459,12 +484,12 @@ export const planEvent = async (req: Request, res: Response) => {
       anomalyResult.anomaly_score,
       anomalyResult.anomaly_label,
       eventId,
-    ]);
+    ])
 
-    const plannedEvent = updateResult.rows[0];
+    const plannedEvent = updateResult.rows[0]
 
     // 9. Schedule propagation simulation (runs on future timestamp)
-    await schedulePropagationJob(eventId, mlResult.severity_score, lat, lon);
+    await schedulePropagationJob(eventId, mlResult.severity_score, lat, lon)
 
     res.status(201).json({
       message: 'Event planned successfully',
@@ -484,13 +509,12 @@ export const planEvent = async (req: Request, res: Response) => {
         prestaging_timeline: prestagingTimeline,
         anomaly_detection: anomalyResult,
       },
-    });
-
+    })
   } catch (error) {
-    console.error('[Plan] Error planning event:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Plan] Error planning event:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
-};
+}
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
@@ -624,28 +648,29 @@ export const updateEvent = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Event not found' })
     }
 
-    const updatedEvent = result.rows[0];
+    const updatedEvent = result.rows[0]
 
     // If event is closed, remove the propagation job and run counterfactual analysis
     if (status === 'closed') {
-      await removePropagationJob(id);
-      console.log(`[Close] Event ${id} closed, job removed`);
+      await removePropagationJob(id)
+      console.log(`[Close] Event ${id} closed, job removed`)
 
       // Compute actual duration from start to close time
-      const closeTime = closed_datetime ? new Date(closed_datetime) : new Date();
-      const startTime = new Date(updatedEvent.start_datetime);
-      const actualDurationMins = Math.max(1, (closeTime.getTime() - startTime.getTime()) / 60000);
+      const closeTime = closed_datetime ? new Date(closed_datetime) : new Date()
+      const startTime = new Date(updatedEvent.start_datetime)
+      const actualDurationMins = Math.max(1, (closeTime.getTime() - startTime.getTime()) / 60000)
 
       // Extract deployment info for counterfactual
-      const deployPlan = updatedEvent.deployment_plan || {};
-      const gatingPlan = updatedEvent.gating_plan || {};
+      const deployPlan = updatedEvent.deployment_plan || {}
+      const gatingPlan = updatedEvent.gating_plan || {}
       const corridor = Array.isArray(updatedEvent.affected_corridors)
         ? updatedEvent.affected_corridors[0]
-        : (updatedEvent.affected_corridors || '');
+        : updatedEvent.affected_corridors || ''
 
       const cfResult = await callCounterfactual({
         event_id: id,
-        predicted_duration_mins: updatedEvent.predicted_duration_mins || updatedEvent.duration_mins || actualDurationMins,
+        predicted_duration_mins:
+          updatedEvent.predicted_duration_mins || updatedEvent.duration_mins || actualDurationMins,
         actual_duration_mins: actualDurationMins,
         corridor,
         event_cause: updatedEvent.category || '',
@@ -653,14 +678,16 @@ export const updateEvent = async (req: Request, res: Response) => {
         officers_deployed: deployPlan.total_officers_deployed || 0,
         barricades_deployed: deployPlan.total_barricades_deployed || 0,
         gating_applied: (gatingPlan.recommendations?.length || 0) > 0,
-      });
+      })
 
       if (cfResult) {
-        await query(
-          'UPDATE events SET counterfactual = $1 WHERE id = $2',
-          [JSON.stringify(cfResult), id]
-        );
-        console.log(`[Close] Counterfactual analysis: policy_regret=${cfResult.policy_regret}%, best_alt="${cfResult.best_alternative}"`);
+        await query('UPDATE events SET counterfactual = $1 WHERE id = $2', [
+          JSON.stringify(cfResult),
+          id,
+        ])
+        console.log(
+          `[Close] Counterfactual analysis: policy_regret=${cfResult.policy_regret}%, best_alt="${cfResult.best_alternative}"`,
+        )
 
         // Also call accuracy endpoint for post-event learning
         try {
@@ -669,15 +696,18 @@ export const updateEvent = async (req: Request, res: Response) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               event_id: id,
-              predicted_duration_mins: updatedEvent.predicted_duration_mins || updatedEvent.duration_mins || actualDurationMins,
+              predicted_duration_mins:
+                updatedEvent.predicted_duration_mins ||
+                updatedEvent.duration_mins ||
+                actualDurationMins,
               actual_duration_mins: actualDurationMins,
               predicted_severity_score: updatedEvent.severity_score || 0,
               event_cause: updatedEvent.category || '',
               corridor,
             }),
-          });
+          })
         } catch {
-          console.log('[Close] Accuracy endpoint not reachable — skipping post-event learning.');
+          console.log('[Close] Accuracy endpoint not reachable — skipping post-event learning.')
         }
       }
 
@@ -685,14 +715,14 @@ export const updateEvent = async (req: Request, res: Response) => {
         message: 'Event closed successfully',
         event: updatedEvent,
         counterfactual: cfResult,
-      });
-      return;
+      })
+      return
     }
 
     res.json({
       message: 'Event updated successfully',
-      event: updatedEvent
-    });
+      event: updatedEvent,
+    })
   } catch (error) {
     console.error('Error updating event:', error)
     res.status(500).json({ error: 'Internal server error' })

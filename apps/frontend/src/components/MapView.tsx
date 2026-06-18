@@ -1,17 +1,18 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import type { PropagationTick, PipelineResult } from '../types';
+import L from 'leaflet'
+import { useEffect } from 'react'
+import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+
+import type { PipelineResult, PropagationTick } from '../types'
 
 // Fix Leaflet default icon issue with bundlers
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+})
 
-const BANGALORE_CENTER: [number, number] = [12.9716, 77.5946];
+const BANGALORE_CENTER: [number, number] = [12.9716, 77.5946]
 
 const RISK_COLORS: Record<string, string> = {
   low: '#10b981',
@@ -19,14 +20,14 @@ const RISK_COLORS: Record<string, string> = {
   orange: '#f97316',
   red: '#ef4444',
   critical: '#dc2626',
-};
+}
 
 function PropagationOverlay({ tick }: { tick: PropagationTick | null }) {
-  const map = useMap();
+  const map = useMap()
 
   useEffect(() => {
-    if (!tick) return;
-    const circles: L.Circle[] = [];
+    if (!tick) return
+    const circles: L.Circle[] = []
 
     Object.entries(tick.activeNodes).forEach(([_nodeId, node]) => {
       const circle = L.circle([node.lat, node.lon], {
@@ -35,43 +36,44 @@ function PropagationOverlay({ tick }: { tick: PropagationTick | null }) {
         fillOpacity: 0.3 + node.intensity * 0.4,
         color: 'transparent',
         className: 'propagation-pulse',
-      }).addTo(map);
-      circles.push(circle);
-    });
+      }).addTo(map)
+      circles.push(circle)
+    })
 
-    return () => circles.forEach((c) => c.remove());
-  }, [tick, map]);
+    return () => circles.forEach((c) => c.remove())
+  }, [tick, map])
 
-  return null;
+  return null
 }
 
 function FlyToLocation({ lat, lon }: { lat: number; lon: number }) {
-  const map = useMap();
+  const map = useMap()
   useEffect(() => {
-    if (lat && lon) map.flyTo([lat, lon], 14, { duration: 1.5 });
-  }, [lat, lon, map]);
-  return null;
+    if (lat && lon) map.flyTo([lat, lon], 14, { duration: 1.5 })
+  }, [lat, lon, map])
+  return null
 }
 
 interface Props {
-  eventLat?: number;
-  eventLon?: number;
-  riskLevel?: string;
-  propagationTick: PropagationTick | null;
-  pipeline?: PipelineResult | null;
+  eventLat?: number
+  eventLon?: number
+  riskLevel?: string
+  propagationTick: PropagationTick | null
+  pipeline?: PipelineResult | null
 }
 
-export default function MapView({ eventLat, eventLon, riskLevel, propagationTick, pipeline }: Props) {
-  const color = RISK_COLORS[riskLevel || 'low'] || '#6b7280';
+export default function MapView({
+  eventLat,
+  eventLon,
+  riskLevel,
+  propagationTick,
+  pipeline,
+}: Props) {
+  const color = RISK_COLORS[riskLevel || 'low'] || '#6b7280'
 
   return (
     <div className="map-container">
-      <MapContainer
-        center={BANGALORE_CENTER}
-        zoom={12}
-        className="leaflet-map"
-        zoomControl={false}
-      >
+      <MapContainer center={BANGALORE_CENTER} zoom={12} className="leaflet-map" zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -101,12 +103,24 @@ export default function MapView({ eventLat, eventLon, riskLevel, propagationTick
             <Circle
               center={[eventLat, eventLon]}
               radius={1200}
-              pathOptions={{ color, fillColor: color, fillOpacity: 0.1, weight: 1, dashArray: '8 4' }}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.1,
+                weight: 1,
+                dashArray: '8 4',
+              }}
             />
             <Circle
               center={[eventLat, eventLon]}
               radius={2500}
-              pathOptions={{ color, fillColor: color, fillOpacity: 0.05, weight: 1, dashArray: '4 8' }}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.05,
+                weight: 1,
+                dashArray: '4 8',
+              }}
             />
           </>
         )}
@@ -116,15 +130,17 @@ export default function MapView({ eventLat, eventLon, riskLevel, propagationTick
           <Circle
             key={`deploy-${i}`}
             center={[
-              (eventLat || BANGALORE_CENTER[0]) + (Math.random() - 0.5) * 0.01,
-              (eventLon || BANGALORE_CENTER[1]) + (Math.random() - 0.5) * 0.01,
+              (eventLat || BANGALORE_CENTER[0]) + ((i * 0.618) % 1 - 0.5) * 0.01,
+              (eventLon || BANGALORE_CENTER[1]) + ((i * 0.382) % 1 - 0.5) * 0.01,
             ]}
             radius={150}
             pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.5, weight: 2 }}
           >
             <Popup>
               <strong>{r.junction_name}</strong>
-              <div>{r.officers} officers, {r.barricades} barricades</div>
+              <div>
+                {r.officers} officers, {r.barricades} barricades
+              </div>
             </Popup>
           </Circle>
         ))}
@@ -136,11 +152,9 @@ export default function MapView({ eventLat, eventLon, riskLevel, propagationTick
       <div className="map-overlay-top">
         <span className="map-city">BENGALURU</span>
         {riskLevel && (
-          <span className={`map-risk risk-${riskLevel}`}>
-            {riskLevel.toUpperCase()}
-          </span>
+          <span className={`map-risk risk-${riskLevel}`}>{riskLevel.toUpperCase()}</span>
         )}
       </div>
     </div>
-  );
+  )
 }
