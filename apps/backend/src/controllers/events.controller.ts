@@ -17,7 +17,7 @@ async function callMLPredict(eventData: any) {
     if (response.ok) {
       const data = await response.json();
       return {
-        duration_mins: data.predicted_duration_mins,
+        duration_mins: Math.round(Number(data.predicted_duration_mins)),
         severity_score: data.severity_score
       };
     }
