@@ -1,15 +1,26 @@
-import { AlertTriangle, BarChart3, Clock, GitBranch, Shield, Users, Zap } from 'lucide-react'
+import {
+  AlertTriangle,
+  BarChart3,
+  Clock,
+  Fingerprint,
+  GitBranch,
+  Shield,
+  Target,
+  Users,
+  Zap,
+} from 'lucide-react'
 
-import type { PipelineResult } from '../types'
+import type { CounterfactualResult, PipelineResult } from '../types'
 import DeploymentTable from './DeploymentTable'
 import RiskGauge from './RiskGauge'
 import Timeline from './Timeline'
 
 interface Props {
   result: PipelineResult
+  counterfactual?: CounterfactualResult | null
 }
 
-export default function PipelinePanel({ result }: Props) {
+export default function PipelinePanel({ result, counterfactual }: Props) {
   const {
     prediction,
     queue_analysis,
@@ -17,6 +28,7 @@ export default function PipelinePanel({ result }: Props) {
     gating_plan,
     anomaly_detection,
     prestaging_timeline,
+    similar_incidents,
   } = result
 
   return (
@@ -80,6 +92,32 @@ export default function PipelinePanel({ result }: Props) {
         </div>
       </div>
 
+      {/* Event Fingerprinting — Historical Precedents */}
+      {similar_incidents && similar_incidents.length > 0 && (
+        <div className="panel-section">
+          <h3>
+            <Fingerprint size={16} /> Historical Precedents
+          </h3>
+          <div className="fingerprint-card">
+            {similar_incidents.map((evt, i) => (
+              <div key={i} className="fingerprint-item">
+                <div className="fingerprint-left">
+                  <span className="fingerprint-cause">{evt.event_cause.replace(/_/g, ' ')}</span>
+                  <span className="fingerprint-meta">
+                    <span>{evt.corridor}</span>
+                    <span>{evt.hour}:00</span>
+                    <span>{Math.round(evt.duration_mins)} min</span>
+                  </span>
+                </div>
+                <span className="fingerprint-score">
+                  {(evt.similarity_score * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Gating Recommendations */}
       {gating_plan.recommendations.length > 0 && (
         <div className="panel-section">
@@ -109,6 +147,56 @@ export default function PipelinePanel({ result }: Props) {
         </h3>
         <Timeline steps={prestaging_timeline} />
       </div>
+
+      {/* Post-Event Accuracy / Counterfactual Analysis */}
+      {counterfactual && (
+        <div className="panel-section">
+          <h3>
+            <Target size={16} /> Post-Event Analysis
+          </h3>
+          <div className="counterfactual-card">
+            <div className="cf-summary">
+              <div className="cf-stat">
+                <span className="cf-stat-value">
+                  {counterfactual.prediction_accuracy_pct.toFixed(0)}%
+                </span>
+                <span className="cf-stat-label">Accuracy</span>
+              </div>
+              <div className="cf-stat">
+                <span className="cf-stat-value">
+                  {Math.round(counterfactual.actual_duration_mins)}m
+                </span>
+                <span className="cf-stat-label">Actual</span>
+              </div>
+              <div className="cf-stat">
+                <span className="cf-stat-value">{counterfactual.policy_regret.toFixed(1)}</span>
+                <span className="cf-stat-label">Policy Regret</span>
+              </div>
+            </div>
+
+            {counterfactual.scenarios.length > 0 && (
+              <div className="cf-scenarios">
+                {counterfactual.scenarios.map((s, i) => (
+                  <div key={i} className="cf-scenario">
+                    <span className="cf-scenario-name">{s.scenario.replace(/_/g, ' ')}</span>
+                    <span
+                      className={`cf-scenario-improvement ${s.improvement_pct > 0 ? 'positive' : 'negative'}`}
+                    >
+                      {s.improvement_pct > 0 ? '-' : '+'}
+                      {Math.abs(s.improvement_mins).toFixed(0)}m (
+                      {Math.abs(s.improvement_pct).toFixed(0)}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {counterfactual.recommendation && (
+              <div className="cf-recommendation">{counterfactual.recommendation}</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

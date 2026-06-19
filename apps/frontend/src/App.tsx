@@ -167,7 +167,10 @@ function App() {
                 </div>
               </>
             ) : pipelineResult ? (
-              <PipelinePanel result={pipelineResult} />
+              <PipelinePanel
+                result={pipelineResult}
+                counterfactual={selectedEvent?.counterfactual}
+              />
             ) : null}
           </div>
         </aside>

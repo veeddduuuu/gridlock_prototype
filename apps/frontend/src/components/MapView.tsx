@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 
 import type { PipelineResult, PropagationTick } from '../types'
@@ -54,6 +54,13 @@ function FlyToLocation({ lat, lon }: { lat: number; lon: number }) {
   return null
 }
 
+const FORECAST_STEPS = [
+  { label: 'NOW', mins: 0, scale: 1.0 },
+  { label: '+5', mins: 5, scale: 1.3 },
+  { label: '+15', mins: 15, scale: 1.8 },
+  { label: '+30', mins: 30, scale: 2.5 },
+]
+
 interface Props {
   eventLat?: number
   eventLon?: number
@@ -70,6 +77,8 @@ export default function MapView({
   pipeline,
 }: Props) {
   const color = RISK_COLORS[riskLevel || 'low'] || '#6b7280'
+  const [forecastIdx, setForecastIdx] = useState(0)
+  const forecast = FORECAST_STEPS[forecastIdx]
 
   return (
     <div className="map-container">
@@ -94,15 +103,20 @@ export default function MapView({
               </Popup>
             </Marker>
 
-            {/* Impact radius rings */}
+            {/* Impact radius rings — scaled by forecast time step */}
             <Circle
               center={[eventLat, eventLon]}
-              radius={500}
-              pathOptions={{ color, fillColor: color, fillOpacity: 0.25, weight: 2 }}
+              radius={500 * forecast.scale}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.25 / forecast.scale,
+                weight: 2,
+              }}
             />
             <Circle
               center={[eventLat, eventLon]}
-              radius={1200}
+              radius={1200 * forecast.scale}
               pathOptions={{
                 color,
                 fillColor: color,
@@ -113,7 +127,7 @@ export default function MapView({
             />
             <Circle
               center={[eventLat, eventLon]}
-              radius={2500}
+              radius={2500 * forecast.scale}
               pathOptions={{
                 color,
                 fillColor: color,
@@ -155,6 +169,28 @@ export default function MapView({
           <span className={`map-risk risk-${riskLevel}`}>{riskLevel.toUpperCase()}</span>
         )}
       </div>
+
+      {/* Temporal forecast slider */}
+      {eventLat && pipeline && (
+        <div className="forecast-slider">
+          {FORECAST_STEPS.map((step, i) => (
+            <button
+              key={step.label}
+              className={`forecast-btn ${i === forecastIdx ? 'active' : ''}`}
+              onClick={() => setForecastIdx(i)}
+            >
+              {step.label}
+              {step.mins > 0 && <span className="forecast-min">MIN</span>}
+            </button>
+          ))}
+          <div className="forecast-track">
+            <div
+              className="forecast-fill"
+              style={{ width: `${(forecastIdx / (FORECAST_STEPS.length - 1)) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
