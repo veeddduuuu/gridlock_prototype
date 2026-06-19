@@ -1,0 +1,49 @@
+import { BarElement, CategoryScale, Chart as ChartJS, LinearScale, Tooltip } from 'chart.js'
+import { Bar } from 'react-chartjs-2'
+
+import type { Deployment } from '../../types'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
+
+interface Props {
+  items: Deployment[]
+}
+
+export default function DeploymentBarChart({ items }: Props) {
+  return (
+    <Bar
+      data={{
+        labels: items.map((i) => i.junctionName || i.junction),
+        datasets: [
+          {
+            label: 'Fleet Count',
+            data: items.map((i) => i.fleet_count),
+            backgroundColor: '#2563eb',
+            borderRadius: 4,
+          },
+        ],
+      }}
+      options={{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#71717a', font: { size: 11 }, boxWidth: 10, padding: 12 },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#71717a', font: { size: 11 } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(113, 113, 122, 0.12)' },
+            ticks: { color: '#71717a', font: { size: 11 } },
+          },
+        },
+      }}
+    />
+  )
+}
