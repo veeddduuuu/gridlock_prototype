@@ -1,9 +1,10 @@
-import { GitBranch, Users } from 'lucide-react'
+import { Construction, GitBranch, Users } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-import DeploymentTable from '../../analysis/DeploymentTable'
+import BarrierRecommendationCard from '../../analysis/BarrierRecommendationCard'
+import FleetRecommendationCard from '../../analysis/FleetRecommendationCard'
 import DeploymentBarChart from '../../charts/DeploymentBarChart'
 import type { DashboardOutletContext } from '../AppLayout'
 
@@ -30,7 +31,7 @@ export default function PerformancePage() {
     )
   }
 
-  const { deployment_plan, gating_plan } = pipelineResult
+  const { fleet_plan, barricade_plan, gating_plan } = pipelineResult
 
   return (
     <div className="h-full overflow-y-auto p-8">
@@ -49,8 +50,8 @@ export default function PerformancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[280px]">
-            {deployment_plan.recommendations.length > 0 ? (
-              <DeploymentBarChart items={deployment_plan.recommendations} />
+            {fleet_plan.deployments.length > 0 ? (
+              <DeploymentBarChart items={fleet_plan.deployments} />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 No deployments recommended
@@ -62,11 +63,22 @@ export default function PerformancePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Users size={16} /> Resource Deployment Detail
+              <Users size={16} /> Fleet Deployment Detail
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DeploymentTable plan={deployment_plan} />
+            <FleetRecommendationCard plan={fleet_plan} />
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Construction size={16} /> Barricade Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BarrierRecommendationCard plan={barricade_plan} />
           </CardContent>
         </Card>
 

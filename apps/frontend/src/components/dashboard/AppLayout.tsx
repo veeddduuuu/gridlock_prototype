@@ -15,6 +15,7 @@ export interface DashboardOutletContext {
   eventLat: number | undefined
   eventLon: number | undefined
   events: PlannedEvent[]
+  activeEvents: PlannedEvent[]
   wsConnected: boolean
   lastTick: ReturnType<typeof useWebSocket>['lastTick']
 }
@@ -77,7 +78,7 @@ export default function AppLayout() {
     setSelectedEvent(ev)
     setEventLat(ev.lat)
     setEventLon(ev.lon)
-    if (ev.deployment_plan && ev.risk_level) {
+    if (ev.fleet_plan && ev.risk_level) {
       setPipelineResult({
         prediction: {
           duration_mins: ev.predicted_duration_mins,
@@ -104,7 +105,8 @@ export default function AppLayout() {
           effective_service_rate: 0,
           effective_arrival_rate: 0,
         },
-        deployment_plan: ev.deployment_plan,
+        fleet_plan: ev.fleet_plan,
+        barricade_plan: ev.barricade_plan || { barricades: [], rationale: '', source: 'fallback' },
         gating_plan: ev.gating_plan || {
           risk_level: ev.risk_level,
           blocking_probability: ev.blocking_probability,
@@ -134,6 +136,7 @@ export default function AppLayout() {
     eventLat,
     eventLon,
     events,
+    activeEvents,
     wsConnected: connected,
     lastTick,
   }

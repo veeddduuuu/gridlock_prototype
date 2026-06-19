@@ -5,7 +5,7 @@ import MapplsMap from '../../map/MapplsMap'
 import type { DashboardOutletContext } from '../AppLayout'
 
 export default function LiveMapPage() {
-  const { eventLat, eventLon, pipelineResult, lastTick } =
+  const { eventLat, eventLon, pipelineResult, lastTick, activeEvents } =
     useOutletContext<DashboardOutletContext>()
   const [clock, setClock] = useState(new Date())
 
@@ -22,6 +22,7 @@ export default function LiveMapPage() {
         riskLevel={pipelineResult?.queue_analysis.risk_level}
         propagationTick={lastTick}
         pipeline={pipelineResult}
+        activeEvents={activeEvents}
       />
 
       <div className="absolute right-4 bottom-4 z-[1000] font-mono text-[28px] font-light tracking-wider text-muted-foreground opacity-60">

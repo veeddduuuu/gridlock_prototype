@@ -1,30 +1,24 @@
 import { BarElement, CategoryScale, Chart as ChartJS, LinearScale, Tooltip } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 
-import type { DeploymentItem } from '../../types'
+import type { Deployment } from '../../types'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip)
 
 interface Props {
-  items: DeploymentItem[]
+  items: Deployment[]
 }
 
 export default function DeploymentBarChart({ items }: Props) {
   return (
     <Bar
       data={{
-        labels: items.map((i) => i.junction_name || i.junction_id),
+        labels: items.map((i) => i.junctionName || i.junction),
         datasets: [
           {
-            label: 'Officers',
-            data: items.map((i) => i.officers),
+            label: 'Fleet Count',
+            data: items.map((i) => i.fleet_count),
             backgroundColor: '#2563eb',
-            borderRadius: 4,
-          },
-          {
-            label: 'Barricades',
-            data: items.map((i) => i.barricades),
-            backgroundColor: '#f97316',
             borderRadius: 4,
           },
         ],
