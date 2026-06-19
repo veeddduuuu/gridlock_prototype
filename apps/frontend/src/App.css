@@ -886,10 +886,213 @@
   color: var(--text-primary) !important;
 }
 
+/* ---- Forecast Slider ---- */
+.forecast-slider {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.forecast-btn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.forecast-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.forecast-btn.active {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent);
+}
+
+.forecast-min {
+  font-size: 8px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+.forecast-track {
+  position: absolute;
+  bottom: 4px;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+.forecast-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+
+/* ---- Fingerprinting Card ---- */
+.fingerprint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fingerprint-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  transition: border-color 0.2s;
+}
+
+.fingerprint-item:hover {
+  border-color: var(--border-active);
+}
+
+.fingerprint-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fingerprint-cause {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.fingerprint-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+}
+
+.fingerprint-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.fingerprint-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px;
+}
+
+/* ---- Accuracy / Counterfactual Card ---- */
+.counterfactual-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cf-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cf-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.cf-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cf-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.cf-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cf-scenario {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.cf-scenario-name {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cf-scenario-improvement {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.cf-scenario-improvement.positive { color: var(--green); }
+.cf-scenario-improvement.negative { color: var(--red); }
+
+.cf-recommendation {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 900px) {
   .main-layout { flex-direction: column; }
   .left-panel { width: 100%; max-height: 50vh; }
   .right-panel { min-height: 50vh; }
   .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .cf-summary { grid-template-columns: 1fr; }
 }
