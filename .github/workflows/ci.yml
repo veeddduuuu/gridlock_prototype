@@ -67,7 +67,7 @@ jobs:
 
   # ─── ML ──────────────────────────────────────────────────────────────────────
   ml-ci:
-    name: ML (install)
+    name: ML (install + smoke test)
     runs-on: ubuntu-latest
 
     defaults:
@@ -93,3 +93,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install --retries 5 --timeout 60 torch --index-url https://download.pytorch.org/whl/cpu
           pip install --retries 5 --timeout 60 -r requirements.txt
+
+      - name: Smoke test (imports + schemas)
+        run: |
+          python -c "
+          from src.predict import Predictor, find_latest_artifacts
+          from src.queue_model import compute_queue_metrics, recommend_deployment, recommend_gating
+          from src.counterfactual import run_counterfactual_analysis
+          from src.api.schemas import PredictRequest, PredictResponse
+          from src.features import Encoders
+          from src.data import load_config
+          from experiments.feature_registry import FEATURE_SETS
+          from experiments.model_registry import MODEL_REGISTRY, create_model
+          print(f'Models: {list(MODEL_REGISTRY.keys())}')
+          print(f'Feature sets: {list(FEATURE_SETS.keys())}')
+          assert len(MODEL_REGISTRY) >= 3, 'Expected at least 3 models'
+          assert len(FEATURE_SETS) >= 6, 'Expected at least 6 feature sets'
+          print('All imports OK')
+          "
+
+      - name: Validate ML config files
+        run: |
+          python -c "
+          import yaml
+          with open('config/schema.yaml') as f:
+              cfg = yaml.safe_load(f)
+              assert 'columns' in cfg, 'schema.yaml missing columns'
+              assert 'duration' in cfg, 'schema.yaml missing duration'
+          with open('config/experiment.yaml') as f:
+              cfg = yaml.safe_load(f)
+              assert 'mlflow' in cfg, 'experiment.yaml missing mlflow'
+              assert 'tournament' in cfg, 'experiment.yaml missing tournament'
+          print('Config validation OK')
+          "
