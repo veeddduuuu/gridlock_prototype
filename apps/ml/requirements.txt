@@ -3,7 +3,7 @@ uvicorn[standard]
 lightgbm
 catboost
 optuna
-scikit-learn
+scikit-learn==1.9.0  # pinned to match the champion pickle + serving env; bump only via scripts/calibrate_conformal.py
 pandas
 numpy
 pyyaml

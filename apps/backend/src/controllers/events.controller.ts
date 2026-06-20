@@ -10,6 +10,7 @@ import {
   schedulePropagationJob,
 } from '../services/queue.service'
 import {
+  allocateFleetShare,
   assignNearestFleet,
   generateDispatchPlan,
   getHistoricalPrecedents,
@@ -438,6 +439,8 @@ export const planEvent = async (req: Request, res: Response) => {
       severity_score: mlResult.severity_score,
       affected_corridors: Array.isArray(affected_corridors) ? affected_corridors : [corridor],
       requires_road_closure: requires_road_closure || false,
+      confidence: mlResult.confidence,
+      prediction_interval: mlResult.prediction_interval,
     }
 
     const fleetPlan = await generateDispatchPlan({
@@ -671,20 +674,42 @@ export const createEvent = async (req: Request, res: Response) => {
     )
     const conflicts = findConflicts(activeEvent, activeEventsResult.rows)
 
+    // 7b. Conflict-aware re-allocation: when competing active events share this
+    // event's vicinity, divide the fleet pool by severity weight instead of
+    // letting this event greedily claim it all.
+    const competingEvents = conflicts
+      .map((c) => activeEventsResult.rows.find((r) => r.id === c.conflicting_event_id))
+      .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      .map((r) => ({ severity_score: r.severity_score, lat: r.lat, lon: r.lon }))
+
+    const { fleet: dispatchFleet, fairCount } = allocateFleetShare(
+      { lat: activeEvent.lat, lon: activeEvent.lon, severity_score: activeEvent.severity_score },
+      competingEvents,
+      availableFleet,
+    )
+
     if (conflicts.length > 0) {
+      console.log(
+        `[Plan] Conflict re-allocation: claiming ${fairCount}/${availableFleet.length} fleet (severity-weighted) across ${conflicts.length} competing event(s)`,
+      )
       await publishWsEvent('event:conflict', {
         eventId,
         eventName: activeEvent.name,
         conflicts,
+        fleetReallocation: { claimed: fairCount, pool: availableFleet.length },
       })
     }
 
     // 8. Generate the dispatch plan (Groq LLM call, with rule-based fallback)
     const plan = await generateDispatchPlan({
-      event: activeEvent,
+      event: {
+        ...activeEvent,
+        confidence: mlResults.confidence,
+        prediction_interval: mlResults.prediction_interval,
+      },
       forecast,
       precedents,
-      availableFleet,
+      availableFleet: dispatchFleet,
     })
 
     // 9. Persist the plan and create pending fleet assignments

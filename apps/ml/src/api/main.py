@@ -4,12 +4,19 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 
 from ..predict import Predictor, find_latest_artifacts
-from ..queue_model import compute_queue_metrics, recommend_deployment, recommend_gating
+from ..queue_model import (
+    compute_queue_metrics,
+    compute_tandem_queue_metrics,
+    recommend_deployment,
+    recommend_gating,
+)
 from ..anomaly import compute_anomaly_score, load_corridor_baselines, train_corridor_baselines
 from ..counterfactual import run_counterfactual_analysis
+from ..active import update_active_prediction
 from .schemas import (
     PredictRequest, PredictResponse,
     AccuracyRequest, AccuracyResponse,
+    RepredictRequest, RepredictResponse,
     QueueAnalysisRequest, QueueAnalysisResponse,
     DeploymentRequest, DeploymentResponse,
     GatingRequest, GatingResponse,
@@ -54,6 +61,18 @@ def predict(req: PredictRequest):
     return result
 
 
+@app.post("/api/ml/repredict", response_model=RepredictResponse)
+def repredict(req: RepredictRequest):
+    """Re-estimate remaining duration for an active incident using elapsed time
+    folded into the calibrated conformal interval (no model re-run)."""
+    return update_active_prediction(
+        original_total_mins=req.original_total_mins,
+        elapsed_mins=req.elapsed_mins,
+        interval_lower_mins=req.interval_lower_mins,
+        interval_upper_mins=req.interval_upper_mins,
+    )
+
+
 @app.post("/api/ml/accuracy", response_model=AccuracyResponse)
 def accuracy(req: AccuracyRequest):
     return compute_accuracy(req)
@@ -73,7 +92,14 @@ def queue_analysis(req: QueueAnalysisRequest):
         hour=req.hour,
         requires_road_closure=req.requires_road_closure,
     )
-    return result.__dict__
+    tandem = compute_tandem_queue_metrics(
+        predicted_duration_mins=req.predicted_duration_mins,
+        corridor=req.corridor,
+        event_cause=req.event_cause,
+        hour=req.hour,
+        requires_road_closure=req.requires_road_closure,
+    )
+    return {**result.__dict__, "tandem": tandem}
 
 
 @app.post("/api/ml/deployment", response_model=DeploymentResponse)

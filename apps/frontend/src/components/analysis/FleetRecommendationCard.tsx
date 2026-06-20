@@ -1,9 +1,15 @@
-import { Navigation, ShieldAlert, Users } from 'lucide-react'
+import { Navigation, ShieldAlert, ShieldQuestion, Users } from 'lucide-react'
 
 import type { DispatchPlan } from '../../types'
 
 interface Props {
   plan: DispatchPlan
+}
+
+const UNCERTAINTY_STYLE: Record<string, string> = {
+  low: 'bg-green/10 text-green',
+  elevated: 'bg-yellow/10 text-yellow',
+  high: 'bg-red/10 text-red',
 }
 
 export default function FleetRecommendationCard({ plan }: Props) {
@@ -12,15 +18,37 @@ export default function FleetRecommendationCard({ plan }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {/* Overview Stat */}
-      <div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2.5 text-primary border border-border">
-        <Users size={18} className="text-primary" />
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-xl font-bold">{plan.total_fleet_required}</span>
-          <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
-            Officers Dispatched
+      <div className="flex items-center justify-between gap-3 rounded-md bg-muted px-3 py-2.5 text-primary border border-border">
+        <div className="flex items-center gap-3">
+          <Users size={18} className="text-primary" />
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-xl font-bold">{plan.total_fleet_required}</span>
+            <span className="text-[11px] tracking-wider text-muted-foreground uppercase">
+              Officers Dispatched
+            </span>
+          </div>
+        </div>
+        {plan.uncertainty_level && (
+          <span
+            className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${UNCERTAINTY_STYLE[plan.uncertainty_level] || 'bg-muted text-muted-foreground'}`}
+            title="ML prediction uncertainty driving the contingency reserve"
+          >
+            {plan.uncertainty_level} uncertainty
+          </span>
+        )}
+      </div>
+
+      {typeof plan.contingency_reserve === 'number' && plan.contingency_reserve > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-orange/30 bg-orange/5 px-2.5 py-1.5 text-[11px] text-foreground">
+          <ShieldQuestion size={14} className="shrink-0 text-orange" />
+          <span>
+            <span className="font-semibold text-orange">
+              {plan.contingency_reserve} contingency unit{plan.contingency_reserve === 1 ? '' : 's'}
+            </span>{' '}
+            pre-staged for extended-duration risk (wide prediction interval).
           </span>
         </div>
-      </div>
+      )}
 
       {/* Rationale */}
       {plan.rationale && (

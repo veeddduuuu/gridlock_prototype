@@ -1,3 +1,5 @@
+import { CORRIDOR_CASCADE, DEFAULT_CASCADE } from '../data/corridorCascade'
+
 export interface Junction {
   id: string
   name: string
@@ -953,14 +955,17 @@ class GraphService {
     const addEdge = (source: string, target: string, corridor: string, prob: number) => {
       if (!this.adjacencyList.has(source)) this.adjacencyList.set(source, [])
       if (!this.adjacencyList.has(target)) this.adjacencyList.set(target, [])
+      // Prefer the cascade weight learned from Astram history for this corridor;
+      // fall back to the per-edge literal, then the learned median default.
+      const cascade = CORRIDOR_CASCADE[corridor] ?? (Number.isFinite(prob) ? prob : DEFAULT_CASCADE)
       this.adjacencyList
         .get(source)!
-        .push({ source, target, corridor, cascadeProbability: prob, direction: 'inbound' })
+        .push({ source, target, corridor, cascadeProbability: cascade, direction: 'inbound' })
       this.adjacencyList.get(target)!.push({
         source: target,
         target: source,
         corridor,
-        cascadeProbability: prob,
+        cascadeProbability: cascade,
         direction: 'outbound',
       })
     }

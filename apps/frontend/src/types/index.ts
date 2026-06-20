@@ -36,6 +36,24 @@ export interface PipelinePrediction {
   confidence_factors?: ConfidenceFactors | null
 }
 
+export interface TandemStage {
+  stage: number
+  role: 'incident' | 'upstream'
+  queue_vehicles: number
+  time_to_gridlock_mins: number
+  status: string
+}
+
+export interface TandemAnalysis {
+  is_tandem: boolean
+  n_segments: number
+  stages: TandemStage[]
+  furthest_gridlock_stage: number
+  corridor_gridlock: boolean
+  total_queued_vehicles: number
+  spillback_rate_veh_per_min: number
+}
+
 export interface QueueAnalysis {
   blocking_probability: number
   expected_queue_length: number
@@ -45,6 +63,7 @@ export interface QueueAnalysis {
   utilization: number
   effective_service_rate: number
   effective_arrival_rate: number
+  tandem?: TandemAnalysis | null
 }
 
 export interface AssignedFleetMember {
@@ -67,6 +86,8 @@ export interface DispatchPlan {
   rationale: string
   deployments: Deployment[]
   source: 'llm' | 'fallback'
+  contingency_reserve?: number
+  uncertainty_level?: 'low' | 'elevated' | 'high'
 }
 
 export type BarricadeType = 'hard_closure' | 'diversion_sign'
@@ -109,6 +130,7 @@ export interface AnomalyResult {
   anomaly_score: number
   anomaly_label: string
   expected_duration_mins: number
+  expected_range?: [number, number]
   predicted_duration_mins: number
   deviation_pct: number
   model_source: string
