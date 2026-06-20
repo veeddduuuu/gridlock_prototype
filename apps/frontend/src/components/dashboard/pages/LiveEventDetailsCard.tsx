@@ -8,14 +8,17 @@ import {
   UserCheck,
   X,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import type { PlannedEvent } from '../../../types'
+import type { PropagationTick } from '../AppLayout'
 
 interface Props {
   event: PlannedEvent
   assignments: any[]
   barricades: any[]
   loading: boolean
+  lastTick?: PropagationTick
   onClose: () => void
 }
 
@@ -97,30 +100,81 @@ export default function LiveEventDetailsCard({
   assignments,
   barricades,
   loading,
+  lastTick,
   onClose,
 }: Props) {
-  const onSiteCount = assignments.filter(
-    (a) => a.status === 'on_site' || a.status === 'completed',
-  ).length
-  const confirmedBarricadesCount = barricades.filter((b) => b.status === 'confirmed').length
+  const [elapsedMins, setElapsedMins] = useState(0)
+
+  useEffect(() => {
+    if (!event.start_datetime) return
+    const startTime = new Date(event.start_datetime).getTime()
+
+    const updateTimer = () => {
+      const now = Date.now()
+      setElapsedMins((now - startTime) / 60000)
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 10000)
+    return () => clearInterval(interval)
+  }, [event.start_datetime])
+
+  const predicted = event.predicted_duration_mins || 0
+  const isRecovered = event.status === 'resolved' || event.status === 'closed'
+  const isFuture = elapsedMins < 0
+  const isOverdue = !isRecovered && !isFuture && elapsedMins >= predicted
+
+  const startsInMins = Math.max(0, Math.ceil(-elapsedMins))
+  const remainingMins = Math.max(0, Math.ceil(predicted - Math.max(0, elapsedMins)))
+  const overdueMins = Math.floor(elapsedMins - predicted)
+
+  // Calculate dynamic severity from the last tick
+  const activeNodesArray = lastTick?.activeNodes ? Object.values(lastTick.activeNodes) : []
+  const maxNodeIntensity = activeNodesArray.length
+    ? Math.max(...activeNodesArray.map((n: any) => n.intensity))
+    : 0
+
+  // If the event is recovered, force to 0. Otherwise use the highest active node intensity,
+  // falling back to initial event severity if no ticks have occurred yet.
+  const currentSeverity = isRecovered ? 0 : lastTick ? maxNodeIntensity : event.severity_score
 
   const severityColor =
-    event.severity_score > 0.85
+    currentSeverity > 0.85
       ? 'bg-red-500'
-      : event.severity_score > 0.6
+      : currentSeverity > 0.6
         ? 'bg-orange-500'
-        : event.severity_score > 0.3
+        : currentSeverity > 0.3
           ? 'bg-yellow-500'
           : 'bg-green-500'
 
   const severityLabel =
-    event.severity_score > 0.85
+    currentSeverity > 0.85
       ? 'Critical'
-      : event.severity_score > 0.6
+      : currentSeverity > 0.6
         ? 'High'
-        : event.severity_score > 0.3
+        : currentSeverity > 0.3
           ? 'Medium'
           : 'Low'
+
+  // If the backend fleet_assignments table is empty (e.g. for older events), extract from the JSON deployment_plan
+  const displayAssignments =
+    assignments.length > 0
+      ? assignments
+      : (event as any).deployment_plan?.deployments?.flatMap((d: any) =>
+          d.assignedFleet.map((f: any) => ({
+            id: f.user_id + '-' + d.junctionName,
+            junction_name: d.junctionName,
+            user_name: f.user_name,
+            role: d.role,
+            status: 'pending', // fallback status
+          })),
+        ) || []
+
+  const displayOnSiteCount = displayAssignments.filter(
+    (a: any) => a.status === 'on_site' || a.status === 'completed',
+  ).length
+
+  const confirmedBarricadesCount = barricades.filter((b) => b.status === 'confirmed').length
 
   return (
     <div className="absolute top-4 right-4 z-[1000] w-96 max-h-[85vh] flex flex-col rounded-2xl border border-border/80 bg-card/90 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
@@ -168,20 +222,23 @@ export default function LiveEventDetailsCard({
               Severity Score
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-lg font-bold text-foreground">
-                {(event.severity_score * 10).toFixed(1)}
+              <span className="font-mono text-lg font-bold text-foreground transition-all duration-500">
+                {(currentSeverity * 10).toFixed(1)}
               </span>
               <span className="text-xs text-muted-foreground">/ 10</span>
             </div>
             {/* Severity Progress Bar */}
             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-1">
               <div
-                className={`h-full ${severityColor}`}
-                style={{ width: `${event.severity_score * 100}%` }}
+                className={`h-full ${severityColor} transition-all duration-1000 ease-in-out`}
+                style={{ width: `${currentSeverity * 100}%` }}
               />
             </div>
             <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">
-              Label: <span className="text-foreground">{severityLabel}</span>
+              Label:{' '}
+              <span className="text-foreground transition-colors duration-500">
+                {severityLabel}
+              </span>
             </span>
           </div>
 
@@ -189,17 +246,33 @@ export default function LiveEventDetailsCard({
             <div>
               <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase flex items-center gap-1">
                 <Clock size={10} className="text-muted-foreground" />
-                Duration
+                {isRecovered
+                  ? 'Cleared In'
+                  : isFuture
+                    ? 'Starts In'
+                    : isOverdue
+                      ? 'Overdue By'
+                      : 'Remaining Time'}
               </span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className="font-mono text-lg font-bold text-foreground">
-                  {Math.round(event.predicted_duration_mins || 0)}
+                <span
+                  className={`font-mono text-lg font-bold ${isOverdue && !isRecovered ? 'text-red-500' : 'text-foreground'}`}
+                >
+                  {isRecovered
+                    ? Math.round(elapsedMins)
+                    : isFuture
+                      ? startsInMins
+                      : isOverdue
+                        ? overdueMins
+                        : remainingMins}
                 </span>
                 <span className="text-xs text-muted-foreground">mins</span>
               </div>
             </div>
             <span className="text-[10px] text-muted-foreground leading-none">
-              Predicted Incident Term
+              {isRecovered
+                ? 'Total Incident Duration'
+                : `Of ${Math.round(predicted)} mins predicted`}
             </span>
           </div>
         </div>
@@ -212,18 +285,23 @@ export default function LiveEventDetailsCard({
               Fleet Deployment
             </span>
             <span className="text-[10px] font-bold text-muted-foreground uppercase bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
-              {onSiteCount} / {assignments.length} Deployed
+              {displayOnSiteCount} / {displayAssignments.length} Deployed
             </span>
           </div>
 
-          {assignments.length === 0 ? (
-            <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5">
+          {displayAssignments.length === 0 ? (
+            <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <UserCheck size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
               <p className="text-xs text-muted-foreground">No personnel assigned to event</p>
+              {(event as any).recommendation_rationale && (
+                <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
+                  "{(event as any).recommendation_rationale}"
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              {assignments.map((assignment) => (
+              {displayAssignments.map((assignment: any) => (
                 <div
                   key={assignment.id}
                   className="flex items-center justify-between p-2 rounded-lg border border-border bg-background hover:bg-muted/10 transition-colors"
@@ -257,9 +335,14 @@ export default function LiveEventDetailsCard({
           </div>
 
           {barricades.length === 0 ? (
-            <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5">
+            <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <ShieldAlert size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
               <p className="text-xs text-muted-foreground">No barricades recommended</p>
+              {(event as any).barricade_rationale && (
+                <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
+                  "{(event as any).barricade_rationale}"
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">

@@ -33,7 +33,7 @@ async function callMLPredict(eventData: any) {
     if (response.ok) {
       const data = await response.json()
       return {
-        duration_mins: data.predicted_duration_mins,
+        duration_mins: 3, // HARDCODED for testing
         severity_score: data.severity_score,
         severity_label: data.severity_label,
         confidence: data.confidence,
@@ -47,7 +47,7 @@ async function callMLPredict(eventData: any) {
     console.log('[ML] Predict endpoint not reachable, using stubbed values.')
   }
   return {
-    duration_mins: 87,
+    duration_mins: 3, // HARDCODED for testing
     severity_score: 0.8,
     severity_label: 'High',
     confidence: 0.5,
@@ -553,6 +553,55 @@ export const planEvent = async (req: Request, res: Response) => {
 
     const plannedEvent = updateResult.rows[0]
 
+    // 8b. Persist Fleet Assignments
+    for (const deployment of fleetPlan.deployments) {
+      const deployByTime = new Date(Date.now() + deployment.deployByMins * 60000)
+      for (const member of deployment.assignedFleet) {
+        await query(
+          `INSERT INTO fleet_assignments (event_id, user_id, junction_name, role, deploy_by_time, priority, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+          [
+            eventId,
+            member.user_id,
+            deployment.junctionName,
+            deployment.role,
+            deployByTime,
+            deployment.priority,
+          ],
+        )
+
+        await publishWsEvent('fleet:dispatched', {
+          eventId,
+          user_id: member.user_id,
+          user_name: member.user_name,
+          junction: deployment.junctionName,
+          role: deployment.role,
+          priority: deployment.priority,
+          deploy_by_time: deployByTime.toISOString(),
+        })
+      }
+    }
+
+    // 8c. Persist Barricades
+    for (const barricade of barricadePlan.barricades) {
+      await query(
+        `INSERT INTO barricades
+           (event_id, junction_id, location_name, lat, lon, type, activate_at, purpose, rule_source, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'recommended')`,
+        [
+          eventId,
+          barricade.junction_id,
+          barricade.location_name,
+          barricade.lat,
+          barricade.lon,
+          barricade.type,
+          barricade.activate_at,
+          barricade.purpose,
+          barricade.rule_source,
+        ],
+      )
+    }
+
     // 9. Schedule propagation simulation (runs on future timestamp)
     await schedulePropagationJob(eventId, mlResult.severity_score, mlResult.duration_mins, lat, lon)
 
@@ -637,7 +686,7 @@ export const createEvent = async (req: Request, res: Response) => {
     // 3. Update DB with ML Results
     const updateQuery = `
       UPDATE events 
-      SET duration_mins = $1, severity_score = $2, status = 'active'
+      SET duration_mins = $1, predicted_duration_mins = $1, severity_score = $2, status = 'active'
       WHERE id = $3
       RETURNING *
     `

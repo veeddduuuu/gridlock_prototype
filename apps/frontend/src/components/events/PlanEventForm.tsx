@@ -104,8 +104,15 @@ export default function PlanEventForm({ onSubmit, loading }: Props) {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
+
+    // Ensure the date is sent with the correct absolute UTC offset
+    const isoStartDateTime = form.start_datetime
+      ? new Date(form.start_datetime).toISOString()
+      : new Date().toISOString()
+
     onSubmit({
       ...form,
+      start_datetime: isoStartDateTime,
       affected_corridors: [form.corridor],
     })
   }

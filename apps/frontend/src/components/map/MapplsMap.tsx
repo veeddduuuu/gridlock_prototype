@@ -108,13 +108,16 @@ const RISK_COLORS: Record<string, string> = {
   critical: '#dc2626',
 }
 
-const getEventColor = (event: PlannedEvent) => {
-  const score = event.severity_score || 0.5
+const getScoreColor = (score: number) => {
   if (score > 0.85) return RISK_COLORS.critical
   if (score > 0.6) return RISK_COLORS.red
   if (score > 0.3) return RISK_COLORS.orange
   if (score > 0.15) return RISK_COLORS.yellow
   return RISK_COLORS.low
+}
+
+const getEventColor = (event: PlannedEvent) => {
+  return getScoreColor(event.severity_score || 0.5)
 }
 
 const FORECAST_STEPS = [
@@ -204,20 +207,24 @@ export default function MapplsMap({
     activeEvents.forEach((ev) => {
       if (!ev.lat || !ev.lon) return
 
+      const isRecovered = ev.status === 'resolved' || ev.status === 'closed'
       const isSelected = selectedEvent?.id === ev.id
-      const evColor = getEventColor(ev)
+      const evColor = isRecovered ? '#6b7280' : getEventColor(ev)
       const categoryIcon = getCategoryIconSvg(ev.category || '')
 
       const size = isSelected ? 34 : 26
-      const opacity = isSelected ? '1.0' : '0.85'
-      const glow = isSelected
-        ? `box-shadow: 0 0 20px 4px ${evColor}; border: 2.5px solid white;`
-        : `box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 2px solid white;`
+      const opacity = isSelected ? '1.0' : isRecovered ? '0.6' : '0.85'
+      const glow =
+        isSelected && !isRecovered
+          ? `box-shadow: 0 0 20px 4px ${evColor}; border: 2.5px solid white;`
+          : `box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 2px solid white;`
       const scale = isSelected ? 'transform: scale(1.1);' : ''
       const zIndex = isSelected ? '50' : '10'
       const pingSize = size + 12
       const pingOpacity = isSelected ? 0.35 : 0.2
-      const pingRing = `<div class="animate-ping" style="position: absolute; width: ${pingSize}px; height: ${pingSize}px; border-radius: 50%; background-color: ${evColor}; opacity: ${pingOpacity}; pointer-events: none;"></div>`
+      const pingRing = isRecovered
+        ? ''
+        : `<div class="animate-ping" style="position: absolute; width: ${pingSize}px; height: ${pingSize}px; border-radius: 50%; background-color: ${evColor}; opacity: ${pingOpacity}; pointer-events: none;"></div>`
 
       const markerHtml = `
         <div onclick="window.handleEventClick('${ev.id}')" 
@@ -260,8 +267,6 @@ export default function MapplsMap({
     }
   }, [isLoaded, map, activeEvents, selectedEvent, addMarker, removeLayer])
 
-  const color = RISK_COLORS[riskLevel || 'low'] || '#6b7280'
-
   // Fly to event location
   useEffect(() => {
     if (isLoaded && eventLat && eventLon) {
@@ -273,111 +278,49 @@ export default function MapplsMap({
   useEffect(() => {
     if (!isLoaded || !map || !eventLat || !eventLon) return
 
-    const severityScore = pipeline?.prediction?.severity_score ?? 0.5
-    const severityMultiplier = 0.5 + severityScore * 1.5
-
     const sourceId = 'impact-source'
-    const pointData = {
-      type: 'FeatureCollection',
-      features: [
-        { type: 'Feature', geometry: { type: 'Point', coordinates: [eventLon, eventLat] } },
-      ],
-    }
+    const isRecovered = selectedEvent?.status === 'resolved' || selectedEvent?.status === 'closed'
 
-    // Dynamically calculate radius at zoom 11 based on forecast and severity
-    const rInner = 15 * forecast.scale * severityMultiplier
-    const rMiddle = 35 * forecast.scale * severityMultiplier
-    const rOuter = 75 * forecast.scale * severityMultiplier
+    const activeNodesArray = propagationTick?.activeNodes
+      ? Object.values(propagationTick.activeNodes)
+      : []
+    const maxNodeIntensity = activeNodesArray.length
+      ? Math.max(...activeNodesArray.map((n: any) => n.intensity))
+      : 0
 
-    if (map.getSource(sourceId)) {
-      map.getSource(sourceId).setData(pointData)
+    const currentSeverity = isRecovered
+      ? 0
+      : propagationTick?.eventId === selectedEvent?.id
+        ? maxNodeIntensity
+        : (selectedEvent?.severity_score ?? pipeline?.prediction?.severity_score ?? 0.5)
 
-      // Update radius and color
-      if (map.getLayer('impact-inner')) {
-        map.setPaintProperty('impact-inner', 'circle-radius', [
-          'interpolate',
-          ['exponential', 2],
-          ['zoom'],
-          11,
-          rInner,
-          20,
-          rInner * 512,
-        ])
-        map.setPaintProperty('impact-middle', 'circle-radius', [
-          'interpolate',
-          ['exponential', 2],
-          ['zoom'],
-          11,
-          rMiddle,
-          20,
-          rMiddle * 512,
-        ])
-        map.setPaintProperty('impact-outer', 'circle-radius', [
-          'interpolate',
-          ['exponential', 2],
-          ['zoom'],
-          11,
-          rOuter,
-          20,
-          rOuter * 512,
-        ])
+    const impactColor = isRecovered ? '#6b7280' : getScoreColor(currentSeverity)
 
-        map.setPaintProperty('impact-inner', 'circle-color', color)
-        map.setPaintProperty('impact-middle', 'circle-color', color)
-        map.setPaintProperty('impact-outer', 'circle-color', color)
+    if (isRecovered) {
+      if (map.getSource(sourceId)) {
+        ;(map.getSource(sourceId) as any).setData({ type: 'FeatureCollection', features: [] })
       }
     } else {
-      map.addSource(sourceId, { type: 'geojson', data: pointData })
+      const severityMultiplier = 0.5 + currentSeverity * 1.5
 
-      // Outer blurred ring
-      map.addLayer({
-        id: 'impact-outer',
-        type: 'circle',
-        source: sourceId,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            11,
-            rOuter,
-            20,
-            rOuter * 512,
-          ],
-          'circle-color': color,
-          'circle-opacity': 0.15,
-          'circle-blur': 1.5,
-        },
-      })
+      const pointData = {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [eventLon, eventLat] } },
+        ],
+      }
 
-      // Middle blurred ring
-      map.addLayer({
-        id: 'impact-middle',
-        type: 'circle',
-        source: sourceId,
-        paint: {
-          'circle-radius': [
-            'interpolate',
-            ['exponential', 2],
-            ['zoom'],
-            11,
-            rMiddle,
-            20,
-            rMiddle * 512,
-          ],
-          'circle-color': color,
-          'circle-opacity': 0.25,
-          'circle-blur': 1,
-        },
-      })
+      // Dynamically calculate radius at zoom 11 based on forecast and severity
+      const rInner = 15 * forecast.scale * severityMultiplier
+      const rMiddle = 35 * forecast.scale * severityMultiplier
+      const rOuter = 75 * forecast.scale * severityMultiplier
 
-      // Inner glowing core
-      map.addLayer({
-        id: 'impact-inner',
-        type: 'circle',
-        source: sourceId,
-        paint: {
-          'circle-radius': [
+      if (map.getSource(sourceId)) {
+        ;(map.getSource(sourceId) as any).setData(pointData)
+
+        // Update radius and color
+        if (map.getLayer('impact-inner')) {
+          map.setPaintProperty('impact-inner', 'circle-radius', [
             'interpolate',
             ['exponential', 2],
             ['zoom'],
@@ -385,12 +328,96 @@ export default function MapplsMap({
             rInner,
             20,
             rInner * 512,
-          ],
-          'circle-color': color,
-          'circle-opacity': 0.4,
-          'circle-blur': 0.5,
-        },
-      })
+          ])
+          map.setPaintProperty('impact-middle', 'circle-radius', [
+            'interpolate',
+            ['exponential', 2],
+            ['zoom'],
+            11,
+            rMiddle,
+            20,
+            rMiddle * 512,
+          ])
+          map.setPaintProperty('impact-outer', 'circle-radius', [
+            'interpolate',
+            ['exponential', 2],
+            ['zoom'],
+            11,
+            rOuter,
+            20,
+            rOuter * 512,
+          ])
+
+          map.setPaintProperty('impact-inner', 'circle-color', impactColor)
+          map.setPaintProperty('impact-middle', 'circle-color', impactColor)
+          map.setPaintProperty('impact-outer', 'circle-color', impactColor)
+        }
+      } else {
+        map.addSource(sourceId, { type: 'geojson', data: pointData })
+
+        // Outer blurred ring
+        map.addLayer({
+          id: 'impact-outer',
+          type: 'circle',
+          source: sourceId,
+          paint: {
+            'circle-radius': [
+              'interpolate',
+              ['exponential', 2],
+              ['zoom'],
+              11,
+              rOuter,
+              20,
+              rOuter * 512,
+            ],
+            'circle-color': impactColor,
+            'circle-opacity': 0.15,
+            'circle-blur': 1.5,
+          },
+        })
+
+        // Middle blurred ring
+        map.addLayer({
+          id: 'impact-middle',
+          type: 'circle',
+          source: sourceId,
+          paint: {
+            'circle-radius': [
+              'interpolate',
+              ['exponential', 2],
+              ['zoom'],
+              11,
+              rMiddle,
+              20,
+              rMiddle * 512,
+            ],
+            'circle-color': impactColor,
+            'circle-opacity': 0.25,
+            'circle-blur': 1,
+          },
+        })
+
+        // Inner glowing core
+        map.addLayer({
+          id: 'impact-inner',
+          type: 'circle',
+          source: sourceId,
+          paint: {
+            'circle-radius': [
+              'interpolate',
+              ['exponential', 2],
+              ['zoom'],
+              11,
+              rInner,
+              20,
+              rInner * 512,
+            ],
+            'circle-color': impactColor,
+            'circle-opacity': 0.4,
+            'circle-blur': 0.5,
+          },
+        })
+      }
     }
 
     // Clear old HTML markers
@@ -565,44 +592,48 @@ export default function MapplsMap({
     }
   }, [isLoaded, map, eventLat, eventLon, pipeline])
 
+  const prevNodesRef = useRef<Record<string, { intensity: number; lat: number; lon: number }>>({})
+  const currentNodesRef = useRef<Record<string, { intensity: number; lat: number; lon: number }>>(
+    {},
+  )
+  const transitionStartRef = useRef<number>(0)
+  const currentTickRef = useRef<PropagationTick | null>(null)
+
+  useEffect(() => {
+    if (!propagationTick) return
+    if (propagationTick.tick !== (currentTickRef.current as any)?.tick) {
+      prevNodesRef.current = currentNodesRef.current
+      currentNodesRef.current = propagationTick.activeNodes
+      transitionStartRef.current = Date.now()
+      currentTickRef.current = propagationTick as any
+    }
+  }, [propagationTick])
+
   // Render propagation tick overlays (Heatmap with gaussian blur & animations) using native Mapbox Heatmap Layer for smooth blending
   useEffect(() => {
-    if (!isLoaded || !map || !propagationTick) return
+    if (!isLoaded || !map) return
+
+    const isRecovered = selectedEvent?.status === 'resolved' || selectedEvent?.status === 'closed'
 
     const sourceId = 'propagation-source'
     const layerId = 'propagation-heatmap'
 
+    if (!propagationTick || isRecovered) {
+      if (map.getSource(sourceId)) {
+        ;(map.getSource(sourceId) as any).setData({ type: 'FeatureCollection', features: [] })
+      }
+      return
+    }
+
     const severityScore = pipeline?.prediction?.severity_score ?? 0.5
     const radiusMultiplier = 0.5 + severityScore * 1.5
 
-    // Create GeoJSON from active nodes
-    const features = Object.entries(propagationTick.activeNodes)
-      .filter(([, node]) => node.lat && node.lon)
-      .map(([, node]) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [node.lon, node.lat] },
-        properties: { intensity: node.intensity },
-      }))
-
-    const geojsonData = { type: 'FeatureCollection', features }
-
-    if (map.getSource(sourceId)) {
-      map.getSource(sourceId).setData(geojsonData)
-
-      // Update radius dynamically if severity changes
-      if (map.getLayer(layerId)) {
-        map.setPaintProperty(layerId, 'heatmap-radius', [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          11,
-          20 * radiusMultiplier,
-          18,
-          80 * radiusMultiplier,
-        ])
-      }
-    } else {
-      map.addSource(sourceId, { type: 'geojson', data: geojsonData })
+    // Create Source/Layer if doesn't exist
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
 
       map.addLayer({
         id: layerId,
@@ -610,11 +641,8 @@ export default function MapplsMap({
         source: sourceId,
         maxzoom: 18,
         paint: {
-          // Increase weight as intensity increases
           'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 1, 1],
-          // Increase intensity based on zoom
           'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 11, 1, 18, 3],
-          // Color ramp: transparent -> green -> yellow -> red
           'heatmap-color': [
             'interpolate',
             ['linear'],
@@ -628,7 +656,6 @@ export default function MapplsMap({
             1,
             'rgba(239, 68, 68, 1)',
           ],
-          // Radius scales with zoom and severity
           'heatmap-radius': [
             'interpolate',
             ['linear'],
@@ -638,12 +665,68 @@ export default function MapplsMap({
             18,
             80 * radiusMultiplier,
           ],
-          // Smooth opacity
           'heatmap-opacity': 0.8,
         },
       })
+    } else if (map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, 'heatmap-radius', [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        11,
+        20 * radiusMultiplier,
+        18,
+        80 * radiusMultiplier,
+      ])
     }
-  }, [isLoaded, map, propagationTick, pipeline])
+
+    let animationFrameId: number
+
+    const renderLoop = () => {
+      const now = Date.now()
+      const elapsed = now - transitionStartRef.current
+      const progress = Math.min(1, elapsed / 30000) // 30s transition
+
+      const prevNodes = prevNodesRef.current
+      const currentNodes = currentNodesRef.current
+
+      const allKeys = new Set([...Object.keys(prevNodes), ...Object.keys(currentNodes)])
+      const features: any[] = []
+
+      allKeys.forEach((key) => {
+        const prev = prevNodes[key]
+        const curr = currentNodes[key]
+
+        const startIntensity = prev ? prev.intensity : 0
+        const endIntensity = curr ? curr.intensity : 0
+        const currentIntensity = startIntensity + (endIntensity - startIntensity) * progress
+
+        const lat = curr?.lat || prev?.lat
+        const lon = curr?.lon || prev?.lon
+
+        if (lat && lon && currentIntensity > 0.01) {
+          features.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [lon, lat] },
+            properties: { intensity: currentIntensity },
+          })
+        }
+      })
+
+      const geojsonData = { type: 'FeatureCollection', features }
+      if (map.getSource(sourceId)) {
+        ;(map.getSource(sourceId) as any).setData(geojsonData)
+      }
+
+      animationFrameId = requestAnimationFrame(renderLoop)
+    }
+
+    animationFrameId = requestAnimationFrame(renderLoop)
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [isLoaded, map, propagationTick, selectedEvent?.status, pipeline])
 
   // Heatmap of all events when none is selected
   useEffect(() => {
