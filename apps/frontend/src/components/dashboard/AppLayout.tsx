@@ -221,16 +221,33 @@ export default function AppLayout() {
     }
   }
 
-  const handleCloseEvent = async (id: string) => {
-    try {
-      await closeEvent(id)
-      fetchEvents()
-    } catch (err) {
-      console.error('Failed to close event', err)
-    }
-  }
+  const handleCloseEvent = useCallback(
+    async (id: string) => {
+      try {
+        await closeEvent(id)
+        fetchEvents()
+        setSelectedEvent((prev) => (prev?.id === id ? { ...prev, status: 'closed' } : prev))
+      } catch (err) {
+        console.error('Failed to close event', err)
+      }
+    },
+    [fetchEvents],
+  )
 
-  const activeEvents = events.filter((e) => e.status === 'planned' || e.status === 'active')
+  const activeEvents = events.filter(
+    (e) => e.status === 'planned' || e.status === 'active' || e.status === 'resolved',
+  )
+
+  useEffect(() => {
+    if (lastTick && Object.keys(lastTick.activeNodes).length === 0) {
+      const activeEvent = events.find(
+        (e) => e.id === lastTick.eventId && (e.status === 'active' || e.status === 'planned'),
+      )
+      if (activeEvent) {
+        handleCloseEvent(lastTick.eventId)
+      }
+    }
+  }, [lastTick, events, handleCloseEvent])
 
   const outletContext: DashboardOutletContext = {
     pipelineResult,

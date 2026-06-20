@@ -46,6 +46,7 @@ export default function LiveMapPage() {
           assignments={selectedEventAssignments}
           barricades={selectedEventBarricades}
           loading={loadingDetails}
+          lastTick={lastTick?.eventId === selectedEvent.id ? lastTick : undefined}
           onClose={() => onEventSelect(null)}
         />
       )}
