@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -83,6 +85,26 @@ class PredictResponse(BaseModel):
     confidence_factors: ConfidenceFactors | None = None
 
 
+# --- Live re-prediction schemas ---
+
+class RepredictRequest(BaseModel):
+    original_total_mins: float
+    elapsed_mins: float
+    interval_lower_mins: Optional[float] = None
+    interval_upper_mins: Optional[float] = None
+
+
+class RepredictResponse(BaseModel):
+    elapsed_mins: float
+    original_total_mins: float
+    updated_total_mins: float
+    remaining_mins: float
+    status: str
+    escalate: bool
+    updated_interval: dict
+    note: str
+
+
 # --- Queueing Model schemas ---
 
 class QueueAnalysisRequest(BaseModel):
@@ -102,6 +124,7 @@ class QueueAnalysisResponse(BaseModel):
     utilization: float
     effective_service_rate: float
     effective_arrival_rate: float
+    tandem: Optional[dict] = None  # staged-queue breakdown for long corridors
 
 
 # --- Resource Deployment schemas ---

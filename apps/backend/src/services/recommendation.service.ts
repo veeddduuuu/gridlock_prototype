@@ -16,6 +16,13 @@ export interface HistoricalPrecedent {
   summary: string
 }
 
+export interface PredictionInterval {
+  lower_mins: number | null
+  upper_mins: number | null
+  coverage?: number | null
+  source?: string
+}
+
 export interface DispatchContext {
   event: {
     type: string
@@ -27,10 +34,55 @@ export interface DispatchContext {
     severity_score: number | null
     affected_corridors: string[] | null
     requires_road_closure: boolean
+    // Uncertainty from the ML pipeline — drives the contingency reserve.
+    confidence?: number | null
+    prediction_interval?: PredictionInterval | null
   }
   forecast: CongestionForecast
   precedents: HistoricalPrecedent
   availableFleet: FleetMember[]
+}
+
+export interface UncertaintyAssessment {
+  level: 'low' | 'elevated' | 'high'
+  tailRatio: number | null // upper bound of 90% interval / point estimate
+  reserve: number // contingency units to pre-stage
+  note: string
+}
+
+/**
+ * Turns ML prediction uncertainty into a concrete dispatch signal. A wide
+ * conformal interval means the incident could run much longer than the point
+ * estimate, so we pre-stage a small contingency reserve for extended-duration
+ * coverage rather than treating confidence as a hidden display-only metric.
+ */
+export function assessUncertainty(event: DispatchContext['event']): UncertaintyAssessment {
+  const dur = event.duration_mins ?? null
+  const upper = event.prediction_interval?.upper_mins ?? null
+  const confidence = event.confidence ?? null
+
+  const tailRatio = dur && dur > 0 && upper ? upper / dur : null
+
+  let level: UncertaintyAssessment['level'] = 'low'
+  if ((tailRatio !== null && tailRatio >= 3) || (confidence !== null && confidence < 0.45)) {
+    level = 'high'
+  } else if ((tailRatio !== null && tailRatio >= 2) || (confidence !== null && confidence < 0.6)) {
+    level = 'elevated'
+  }
+
+  const reserve = level === 'high' ? 2 : level === 'elevated' ? 1 : 0
+
+  let note = ''
+  if (level !== 'low') {
+    const ratioTxt = tailRatio !== null ? `${tailRatio.toFixed(1)}×` : 'well above'
+    const upTxt = upper !== null ? ` (90% interval up to ${Math.round(upper)} min` : ''
+    const durTxt = dur !== null ? `, ${ratioTxt} the ${Math.round(dur)}-min estimate)` : ')'
+    note =
+      `Prediction uncertainty is ${level}${upTxt}${upTxt ? durTxt : ''}; ` +
+      `pre-staging ${reserve} contingency unit${reserve === 1 ? '' : 's'} for extended-duration coverage.`
+  }
+
+  return { level, tailRatio, reserve, note }
 }
 
 export interface AssignedFleetMember {
@@ -53,6 +105,8 @@ export interface DispatchPlan {
   rationale: string
   deployments: Deployment[]
   source: 'llm' | 'fallback'
+  contingency_reserve?: number
+  uncertainty_level?: 'low' | 'elevated' | 'high'
 }
 
 const PRECEDENT_TABLE: Record<string, HistoricalPrecedent> = {
@@ -89,6 +143,41 @@ const DEFAULT_PRECEDENT: HistoricalPrecedent = {
  */
 export function getHistoricalPrecedents(category: string): HistoricalPrecedent {
   return PRECEDENT_TABLE[category] ?? DEFAULT_PRECEDENT
+}
+
+export interface CompetingEvent {
+  severity_score: number | null
+  lat: number
+  lon: number
+}
+
+/**
+ * Splits a shared fleet pool across spatially/temporally competing incidents by
+ * severity weight, returning the subset of `availableFleet` this event may claim
+ * (its nearest members up to its fair share). Prevents the first-planned event
+ * from greedily draining a pool that competing active events also need — a
+ * dynamic, conflict-aware allocation rather than static first-come dispatch.
+ */
+export function allocateFleetShare(
+  thisEvent: { lat: number; lon: number; severity_score: number | null },
+  competingEvents: CompetingEvent[],
+  availableFleet: FleetMember[],
+): { fleet: FleetMember[]; share: number; fairCount: number } {
+  if (competingEvents.length === 0 || availableFleet.length === 0) {
+    return { fleet: availableFleet, share: 1, fairCount: availableFleet.length }
+  }
+  const sev = (s: number | null | undefined) => Math.max(0.1, s ?? 0.5)
+  const thisSev = sev(thisEvent.severity_score)
+  const totalSev = thisSev + competingEvents.reduce((sum, e) => sum + sev(e.severity_score), 0)
+  const share = thisSev / totalSev
+  const fairCount = Math.max(1, Math.floor(availableFleet.length * share))
+  // Claim this event's nearest members; leave the rest for competing incidents.
+  const byDistance = [...availableFleet].sort(
+    (a, b) =>
+      Math.hypot(a.current_lat - thisEvent.lat, a.current_lon - thisEvent.lon) -
+      Math.hypot(b.current_lat - thisEvent.lat, b.current_lon - thisEvent.lon),
+  )
+  return { fleet: byDistance.slice(0, fairCount), share, fairCount }
 }
 
 const VALID_ROLES = ['traffic_direction', 'incident_clearance', 'diversion_management']
@@ -188,16 +277,48 @@ export function generateFallbackPlan(
     })
   }
 
+  // Uncertainty-driven contingency reserve: pre-stage extra fleet at the
+  // epicenter when the 90% interval implies the incident could run long.
+  const uncertainty = assessUncertainty(event)
+  let stagedReserve = 0
+  if (uncertainty.reserve > 0 && fleetPool.length > 0) {
+    const epicenterId = forecast.t0_nodes[0] ?? deployments[0]?.junction
+    const epicenter = epicenterId ? graphService.junctions.get(epicenterId) : undefined
+    if (epicenter) {
+      const reserveFleet = assignNearestFleet(
+        epicenter.lat,
+        epicenter.lon,
+        uncertainty.reserve,
+        fleetPool,
+      )
+      if (reserveFleet.length > 0) {
+        stagedReserve = reserveFleet.length
+        deployments.push({
+          junction: epicenter.id,
+          junctionName: epicenter.name,
+          fleet_count: reserveFleet.length,
+          role: 'incident_clearance',
+          priority: 'High',
+          deployByMins: 0,
+          assignedFleet: reserveFleet,
+        })
+      }
+    }
+  }
+
   const corridorList = event.affected_corridors?.join(', ') || 'the affected corridors'
-  const rationale = deployments.length
+  const baseRationale = deployments.length
     ? `Propagation model forecasts congestion reaching ${deployments.map((d) => d.junctionName).join(', ')} within 30 minutes along ${corridorList}. ${precedents.summary} Pre-positioning fleet now should contain spillover before it compounds.`
     : `No junctions are forecasted to exceed the spread threshold in the next 30 minutes; holding fleet on standby. ${precedents.summary}`
+  const rationale = uncertainty.note ? `${baseRationale} ${uncertainty.note}` : baseRationale
 
   return {
     total_fleet_required: deployments.reduce((sum, d) => sum + d.assignedFleet.length, 0),
     rationale,
     deployments,
     source: 'fallback',
+    contingency_reserve: stagedReserve,
+    uncertainty_level: uncertainty.level,
   }
 }
 
@@ -256,6 +377,13 @@ function buildUserPrompt(
 - Affected Corridors: ${event.affected_corridors?.join(', ') || 'N/A'}
 - ML Predicted Duration: ${event.duration_mins ?? 'N/A'} mins
 - ML Severity Score: ${event.severity_score ?? 'N/A'}
+- ML Confidence: ${event.confidence ?? 'N/A'}
+- Duration 90% Interval: ${
+    typeof event.prediction_interval?.lower_mins === 'number' &&
+    typeof event.prediction_interval?.upper_mins === 'number'
+      ? `${Math.round(event.prediction_interval.lower_mins)}–${Math.round(event.prediction_interval.upper_mins)} mins`
+      : 'N/A'
+  }
 
 ACTIVE CONGESTION FORECAST (Predicted Spread):
 - T+0 mins: ${forecast.t0_nodes.map(nameOf).join(', ') || 'None'}
@@ -289,7 +417,8 @@ INSTRUCTIONS:
 1. Review the congestion forecast to see where traffic will spread.
 2. Review historical precedents to understand secondary risks.
 3. Assign available fleet to candidate junctions to mitigate the impact. Do not assign more fleet in total than ${availableFleet.length}.
-4. Return the response strictly as JSON.`
+4. If the duration 90% interval is wide relative to the predicted duration (high uncertainty), reserve 1-2 extra units at the epicenter for extended-duration coverage, and say so in the rationale.
+5. Return the response strictly as JSON.`
 }
 
 function isValidRawPlan(value: unknown): value is RawLlmPlan {
@@ -411,11 +540,15 @@ function resolveRawPlan(
     })
   }
 
+  const uncertainty = assessUncertainty(context.event)
+
   return {
     total_fleet_required: deployments.reduce((sum, d) => sum + d.assignedFleet.length, 0),
     rationale: raw.rationale,
     deployments,
     source: 'llm',
+    contingency_reserve: uncertainty.reserve,
+    uncertainty_level: uncertainty.level,
   }
 }
 

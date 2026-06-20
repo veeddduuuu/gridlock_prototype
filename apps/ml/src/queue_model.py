@@ -33,6 +33,19 @@ CORRIDOR_PROFILES = {
 
 DEFAULT_PROFILE = {"lanes": 2, "capacity": 150, "arrival_rate": 30, "service_rate": 35}
 
+# Long, heterogeneous corridors are better modeled as tandem (staged) queues:
+# the incident segment's overflow spills back through upstream sub-segments.
+# Short / spatially-uniform corridors stay a single M/M/c/K (DEFAULT_SEGMENTS=1).
+CORRIDOR_SEGMENTS = {
+    "ORR": 4, "ORR North 1": 4, "ORR North 2": 4,
+    "ORR East 1": 4, "ORR East 2": 4, "ORR West 1": 4,
+    "Bellary Road": 4, "Bellary Road 1": 4, "Bellary Road 2": 4,
+    "Bannerghatta Road": 4, "Bannerghata Road": 4,
+    "Mysore Road": 3, "Tumkur Road": 3, "Hosur Road": 3, "Old Madras Road": 3,
+    "Airport New South Road": 3, "Magadi Road": 2,
+}
+DEFAULT_SEGMENTS = 1
+
 # Severity multipliers: how much an incident reduces service rate
 SEVERITY_IMPACT = {
     "accident":           0.10,  # near-total blockage
@@ -220,6 +233,86 @@ def compute_queue_metrics(
         effective_service_rate=round(mu_eff, 2),
         effective_arrival_rate=round(lambda_eff, 2),
     )
+
+
+@dataclass
+class TandemStageResult:
+    """Queueing state of one sub-segment of a tandem corridor."""
+    stage: int
+    role: str                    # 'incident' | 'upstream'
+    queue_vehicles: float
+    time_to_gridlock_mins: float  # -1 if not reached within the incident duration
+    status: str                   # green / yellow / red / critical
+
+
+def _segments_for(corridor: str) -> int:
+    for name, n in CORRIDOR_SEGMENTS.items():
+        if name.lower() in corridor.lower() or corridor.lower() in name.lower():
+            return n
+    return DEFAULT_SEGMENTS
+
+
+def compute_tandem_queue_metrics(
+    predicted_duration_mins: float,
+    corridor: str,
+    event_cause: str,
+    hour: int = 12,
+    requires_road_closure: bool = False,
+) -> dict:
+    """Tandem (staged) queue analysis for long heterogeneous corridors.
+
+    Models the incident sub-segment as M/M/c/K, then propagates the unserved
+    overflow upstream stage by stage. For short/uniform corridors this reduces
+    to the single-queue result (is_tandem=False), so it is always safe to call.
+    """
+    incident = compute_queue_metrics(
+        predicted_duration_mins, corridor, event_cause, hour, requires_road_closure,
+    )
+    n_segments = _segments_for(corridor)
+    profile = _get_corridor_profile(corridor)
+
+    # Unserved inflow at the incident (veh/min) — what spills back upstream.
+    excess = max(0.0, incident.effective_arrival_rate
+                 - profile["lanes"] * incident.effective_service_rate)
+    k_stage = profile["capacity"] / max(1, n_segments)
+
+    stages = [TandemStageResult(
+        stage=0, role="incident",
+        queue_vehicles=incident.expected_queue_length,
+        time_to_gridlock_mins=incident.time_to_spillover,
+        status=incident.risk_level,
+    )]
+    furthest = 0 if incident.risk_level in ("red", "critical") else -1
+    cumulative = incident.expected_queue_length
+
+    for j in range(1, n_segments):
+        # Time for accumulated overflow to fill upstream stages 1..j.
+        t_fill = (j * k_stage) / excess if excess > 0 else float("inf")
+        reached = t_fill <= predicted_duration_mins
+        q_j = min(k_stage, excess * max(0.0, predicted_duration_mins - t_fill)) if reached else 0.0
+        if reached:
+            status = "critical" if j == n_segments - 1 else "red"
+            furthest = j
+        else:
+            status = "yellow" if (excess > 0 and t_fill < predicted_duration_mins * 2) else "green"
+        stages.append(TandemStageResult(
+            stage=j, role="upstream",
+            queue_vehicles=round(q_j, 1),
+            time_to_gridlock_mins=round(t_fill, 1) if reached else -1,
+            status=status,
+        ))
+        cumulative += q_j
+
+    return {
+        "is_tandem": n_segments > 1,
+        "n_segments": n_segments,
+        "incident_segment": incident.__dict__,
+        "stages": [s.__dict__ for s in stages],
+        "furthest_gridlock_stage": furthest,
+        "corridor_gridlock": furthest >= n_segments - 1 and n_segments > 1,
+        "total_queued_vehicles": round(cumulative, 1),
+        "spillback_rate_veh_per_min": round(excess, 2),
+    }
 
 
 def recommend_deployment(

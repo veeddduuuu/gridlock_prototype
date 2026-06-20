@@ -137,11 +137,13 @@ class Predictor:
         self.blend_weight = self._conf.get("blend_weight", 0.5)
         self._load_conformal_calibration(artifacts_dir)
 
-    def _compute_conformal_interval(self, pred_log: float, corridor: str, coverage: float = 0.90) -> dict:
+    def _compute_conformal_interval(self, pred_log: float, corridor: str,
+                                    coverage: float = 0.90, severity_label: str = "") -> dict:
         """Compute conformal prediction interval using calibration residuals.
 
         Returns interval bounds in minutes and the coverage level used.
-        Uses corridor-specific quantiles when available, falls back to global.
+        Fallback chain: corridor-specific -> severity band -> global, so events on
+        corridors without enough calibration data still get severity-scaled bands.
         """
         if self._conformal_cal is None:
             return {"lower_mins": None, "upper_mins": None, "coverage": None, "source": "none"}
@@ -149,22 +151,32 @@ class Predictor:
         # Select quantile key based on coverage
         q_key = f"q{int(coverage * 100)}"
 
-        # Try corridor-specific first, fallback to global
+        # 1) Corridor-specific (exact, then fuzzy substring)
         source = "global"
         cal = self._conformal_cal.get("__global__", {})
+        matched = False
         if corridor:
-            # Exact match
             if corridor in self._conformal_cal:
                 cal = self._conformal_cal[corridor]
                 source = f"corridor:{corridor}"
+                matched = True
             else:
-                # Fuzzy substring match
                 corridor_lower = corridor.lower()
                 for key in self._conformal_cal:
-                    if key != "__global__" and key.lower() in corridor_lower:
+                    if key.startswith("sev:") or key == "__global__":
+                        continue
+                    if key.lower() in corridor_lower:
                         cal = self._conformal_cal[key]
                         source = f"corridor:{key}"
+                        matched = True
                         break
+
+        # 2) Severity band fallback when no corridor calibration is available
+        if not matched and severity_label:
+            sev_key = f"sev:{severity_label}"
+            if sev_key in self._conformal_cal:
+                cal = self._conformal_cal[sev_key]
+                source = sev_key
 
         q_value = cal.get(q_key, cal.get("q90", 1.0))
         lower_log = pred_log - q_value
@@ -279,7 +291,9 @@ class Predictor:
 
         # --- Conformal prediction interval ---
         corridor = str(event.get("corridor", ""))
-        interval = self._compute_conformal_interval(pred_log, corridor, coverage=0.90)
+        interval = self._compute_conformal_interval(
+            pred_log, corridor, coverage=0.90, severity_label=sev_label
+        )
 
         return {
             "predicted_duration_mins": round(pred_mins, 1),
