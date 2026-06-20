@@ -614,7 +614,7 @@ export const planEvent = async (req: Request, res: Response) => {
 
     const plannedEvent = updateResult.rows[0]
 
-    // Note: Fleet Assignments are no longer auto-persisted here. 
+    // Note: Fleet Assignments are no longer auto-persisted here.
     // They are proposed in the fleetPlan and the controller must manually dispatch them.
 
     // 8c. Persist Barricades
@@ -1123,12 +1123,18 @@ export const updateAssignmentStatus = async (req: Request, res: Response) => {
       }
     }
 
+    const userResult = await query(`SELECT name FROM users WHERE id = $1`, [
+      updatedAssignment.user_id,
+    ])
+    const userName = userResult.rows[0]?.name || 'Officer'
+
     // Broadcast update over WebSockets
     await publishWsEvent('fleet:status_updated', {
       eventId,
       assignmentId,
       status,
       junctionName: updatedAssignment.junction_name,
+      user_name: userName,
     })
 
     res.json({

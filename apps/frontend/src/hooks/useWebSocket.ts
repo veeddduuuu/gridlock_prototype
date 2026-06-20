@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 import type { PropagationTick } from '../types'
 
@@ -37,6 +38,25 @@ export function useWebSocket() {
               setLastTick(msg.data)
             } else if (msg.event === 'controller:fleet_locations') {
               setLastFleetLocation(msg.data)
+            } else if (msg.event === 'fleet:status_updated') {
+              const { user_name, junctionName, status } = msg.data
+              if (status === 'on_site') {
+                toast.success(
+                  `${user_name || 'Officer'} is On Site at ${junctionName || 'their location'}`,
+                  {
+                    description: 'Live Fleet Update',
+                    duration: 5000,
+                  },
+                )
+              } else if (status === 'en_route') {
+                toast.info(
+                  `${user_name || 'Officer'} is En Route to ${junctionName || 'their location'}`,
+                  {
+                    description: 'Live Fleet Update',
+                    duration: 5000,
+                  },
+                )
+              }
             }
           } catch {
             /* ignore parse errors */
