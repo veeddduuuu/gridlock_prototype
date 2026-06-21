@@ -249,3 +249,11 @@ export async function reportFieldIncident(payload: any): Promise<any> {
   if (!res.ok) throw new Error(`Report field incident failed: ${res.statusText}`)
   return await res.json()
 }
+
+export async function confirmBarricade(eventId: string, barricadeId: string): Promise<any> {
+  const res = await fetchWithAuth(`${API_BASE}/api/events/${eventId}/barricades/${barricadeId}`, {
+    method: 'PUT',
+  })
+  if (!res.ok) throw new Error(`Confirm barricade failed: ${res.statusText}`)
+  return await res.json()
+}

@@ -759,11 +759,12 @@ export const createEvent = async (req: Request, res: Response) => {
     // 3. Update DB with ML Results
     const updateQuery = `
       UPDATE events 
-      SET duration_mins = $1, predicted_duration_mins = $1, severity_score = $2, status = 'active'
-      WHERE id = $3
+      SET duration_mins = $1, predicted_duration_mins = $2, severity_score = $3, status = 'active'
+      WHERE id = $4
       RETURNING *
     `
     const updateResult = await query(updateQuery, [
+      mlResults.duration_mins,
       mlResults.duration_mins,
       mlResults.severity_score,
       eventId,

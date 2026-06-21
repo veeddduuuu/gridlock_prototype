@@ -72,10 +72,9 @@ export default function FleetDashboard() {
   const [routePath, setRoutePath] = useState<[number, number][] | null>(null)
 
   const handleSubmitReport = async () => {
-    if (!liveLocationRef.current) {
-      toast.error('Unable to determine your location.')
-      return
-    }
+    const reportLat = liveLocationRef.current?.lat || liveLocation?.lat || 12.9716
+    const reportLon = liveLocationRef.current?.lon || liveLocation?.lon || 77.5946
+
     setIsSubmitting(true)
     try {
       await reportFieldIncident({
@@ -83,8 +82,8 @@ export default function FleetDashboard() {
         category: reportType,
         name: `Field Report: ${reportType}`,
         description: reportDesc,
-        lat: liveLocationRef.current.lat,
-        lon: liveLocationRef.current.lon,
+        lat: reportLat,
+        lon: reportLon,
         start_datetime: new Date().toISOString(),
         priority,
         requires_road_closure: requiresBackup,

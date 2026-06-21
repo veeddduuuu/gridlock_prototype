@@ -579,8 +579,8 @@ export default function MapplsMap({
           source: 'spread-edges-source',
           paint: {
             'line-color': impactColor,
-            'line-width': 2,
-            'line-opacity': 0.15,
+            'line-width': 3,
+            'line-opacity': 0.4,
             'line-dasharray': [2, 2],
           },
         })
@@ -614,7 +614,7 @@ export default function MapplsMap({
           paint: {
             'circle-radius': getRadiusExpression(rOuter) as any,
             'circle-color': impactColor,
-            'circle-opacity': ['*', ['get', 'intensity'], 0.15] as any,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.1] as any,
             'circle-blur': 1.5,
             'circle-radius-transition': { duration: 300 } as any,
             'circle-opacity-transition': { duration: 300 } as any,
@@ -629,7 +629,7 @@ export default function MapplsMap({
           paint: {
             'circle-radius': getRadiusExpression(rMiddle) as any,
             'circle-color': impactColor,
-            'circle-opacity': ['*', ['get', 'intensity'], 0.25] as any,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.15] as any,
             'circle-blur': 1,
             'circle-radius-transition': { duration: 300 } as any,
             'circle-opacity-transition': { duration: 300 } as any,
@@ -644,7 +644,7 @@ export default function MapplsMap({
           paint: {
             'circle-radius': getRadiusExpression(rInner) as any,
             'circle-color': impactColor,
-            'circle-opacity': ['*', ['get', 'intensity'], 0.4] as any,
+            'circle-opacity': ['*', ['get', 'intensity'], 0.25] as any,
             'circle-blur': 0.5,
             'circle-radius-transition': { duration: 300 } as any,
             'circle-opacity-transition': { duration: 300 } as any,
