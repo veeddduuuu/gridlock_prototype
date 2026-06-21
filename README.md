@@ -522,6 +522,24 @@ erDiagram
 ```
 
 ```mermaid
+---
+config:
+  theme: base
+  look: handDrawn
+  themeVariables:
+    primaryColor: "#F6F3D6"
+    primaryBorderColor: "#B8B25A"
+    primaryTextColor: "#222222"
+
+    secondaryColor: "#EEECC8"
+    secondaryBorderColor: "#B8B25A"
+
+    tertiaryColor: "#F9F8E8"
+
+    lineColor: "#555555"
+
+    fontFamily: "'Recursive Variable', sans-serif"
+---
 graph TD
     R["/"] --> LP["LandingPage (Public)"]
     R2["/login/controller"] --> CL["ControllerLogin"]
