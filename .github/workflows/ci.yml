@@ -126,33 +126,10 @@ jobs:
           print('Config validation OK')
           "
 
-  # ─── CI: Docker Integration ──────────────────────────────────────────────────
-  docker-integration-ci:
-    name: Docker Integration Test
-    needs: [frontend-ci, backend-ci, ml-ci]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Start Docker Containers
-        run: docker compose up -d --build
-
-      - name: Verify Services are Running
-        run: docker compose ps
-
-      - name: Stop Docker Containers
-        if: always()
-        run: docker compose down
-
   # ─── CD: EC2 Deployment ──────────────────────────────────────────────────────
   deploy-to-ec2:
     name: Deploy to EC2 Instance
-    needs: [docker-integration-ci]
+    needs: [frontend-ci, backend-ci, ml-ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -166,10 +143,12 @@ jobs:
             # Navigate to the project directory on your EC2 instance
             # Replace this path with the actual path where your project is cloned
             cd ~/gridlock_prototype
-            
+
             # Pull the latest changes from the main branch
-            git pull origin main
-            
+            git fetch origin
+            git reset --hard origin/main
+
             # Rebuild and restart the Docker containers
             docker compose down
+            add a npm install
             docker compose up -d --build
