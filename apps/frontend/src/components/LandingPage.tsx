@@ -166,6 +166,53 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  System Chatter Component                                           */
+/* ------------------------------------------------------------------ */
+
+function SystemChatter() {
+  const [logs, setLogs] = useState<string[]>([])
+  useEffect(() => {
+    const msgs = [
+      '[SYS] Ingesting live traffic feed...',
+      '[ML_ENGINE] Fingerprint matched: 2,497 analogues.',
+      '[GRAPH_BFS] Node 42A -> Node 42B spillback predicted.',
+      '[BAR_RECOMMEND] Critical junction identified.',
+      '[DISPATCH] Rerouting Unit 04 via MapMyIndia APIs...',
+      '[SYS] Congestion decay accelerated by 1.5x.',
+    ]
+    let i = 0
+    const interval = setInterval(() => {
+      setLogs((prev) => [...prev.slice(-3), msgs[i % msgs.length]])
+      i++
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div className="absolute top-6 right-6 w-64 md:w-72 bg-black/80 border border-emerald-500/30 rounded-lg p-3 font-mono text-[10px] text-emerald-500 backdrop-blur-md shadow-2xl z-50 overflow-hidden">
+      <div className="flex items-center gap-1.5 mb-2 border-b border-emerald-500/30 pb-2">
+        <div className="w-2 h-2 rounded-full bg-red-500" />
+        <div className="w-2 h-2 rounded-full bg-yellow-500" />
+        <div className="w-2 h-2 rounded-full bg-green-500" />
+        <span className="ml-2 text-emerald-500/70 font-semibold tracking-wider">
+          sys_chatter.log
+        </span>
+      </div>
+      <div className="flex flex-col gap-1.5 min-h-[70px] justify-end">
+        {logs.map((log, idx) => (
+          <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+            <span className="text-emerald-500/50 mr-1">{'>'}</span> {log}
+          </motion.div>
+        ))}
+        <motion.div animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>
+          <span className="text-emerald-500/50 mr-1">{'>'}</span> _
+        </motion.div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -383,10 +430,53 @@ export default function LandingPage() {
                   Powered by MapMyIndia
                 </span>
               </div>
+
+              {/* System Chatter Terminal */}
+              <SystemChatter />
             </div>
           </div>
         </motion.div>
       </HeroSection>
+
+      {/* ── Glowing Tech Stack Marquee ─────────────────────────────── */}
+      <div className="relative flex overflow-hidden border-b border-border/50 bg-muted/10 py-5 z-10 hidden md:flex">
+        {/* Glow effects on edges */}
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none" />
+
+        <motion.div
+          className="flex items-center gap-16 px-8"
+          animate={{ x: [0, -1035] }}
+          transition={{ repeat: Infinity, ease: 'linear', duration: 25 }}
+        >
+          {[
+            'MapMyIndia Routing',
+            'Graph BFS Engine',
+            'Redis Pub/Sub',
+            'LLM Interventions',
+            'BullMQ Workers',
+            'React 18',
+            'WebSockets',
+            'Tailwind CSS',
+            // Duplicate for seamless scroll
+            'MapMyIndia Routing',
+            'Graph BFS Engine',
+            'Redis Pub/Sub',
+            'LLM Interventions',
+            'BullMQ Workers',
+            'React 18',
+            'WebSockets',
+            'Tailwind CSS',
+          ].map((tech, i) => (
+            <span
+              key={i}
+              className="text-sm font-mono font-medium text-primary/60 whitespace-nowrap"
+            >
+              {tech}
+            </span>
+          ))}
+        </motion.div>
+      </div>
 
       {/* ── Trusted By (marquee) ───────────────────────────────────── */}
       {/* <motion.section
@@ -468,33 +558,45 @@ export default function LandingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-80px' }}
             variants={staggerContainer}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60 rounded-2xl overflow-hidden border border-border/60"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
-            {features.map((f, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                whileHover={{ backgroundColor: 'var(--muted)' }}
-                className="group bg-background p-8 md:p-10 flex flex-col gap-4 transition-colors duration-300"
-              >
+            {features.map((f, i) => {
+              // Bento Box logic: 1st and 4th items span 2 columns on desktop
+              const isLarge = i === 0 || i === 3
+              return (
                 <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-                  className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center"
+                  key={i}
+                  variants={fadeUp}
+                  whileHover={{ y: -4, borderColor: 'hsl(var(--primary) / 0.5)' }}
+                  className={`group bg-card p-8 md:p-10 flex flex-col gap-4 rounded-3xl border border-border/60 transition-all duration-300 relative overflow-hidden ${
+                    isLarge ? 'md:col-span-2' : 'md:col-span-1'
+                  }`}
                 >
-                  <f.icon size={22} strokeWidth={2} />
+                  {/* Subtle background glow on hover */}
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                    className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center relative z-10"
+                  >
+                    <f.icon size={24} strokeWidth={2} />
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-foreground relative z-10">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+                    {f.description}
+                  </p>
+
+                  <motion.span
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 4 }}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary cursor-pointer mt-auto pt-4 relative z-10 uppercase tracking-wider"
+                  >
+                    Learn more <ChevronRight size={14} />
+                  </motion.span>
                 </motion.div>
-                <h3 className="text-lg font-semibold text-foreground">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-                <motion.span
-                  initial={{ x: 0 }}
-                  whileHover={{ x: 4 }}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary cursor-pointer mt-auto pt-2"
-                >
-                  Learn more <ChevronRight size={14} />
-                </motion.span>
-              </motion.div>
-            ))}
+              )
+            })}
           </motion.div>
         </div>
       </section>
