@@ -85,7 +85,7 @@ export default function CircularPipeline({
 
     if (currentStep >= PIPELINE_STEPS.length) {
       const timer = setTimeout(() => {
-        if (autoStart) {
+        if (autoStart && isInView) {
           setCurrentStep(0)
         } else {
           setIsPlaying(false)
@@ -102,17 +102,28 @@ export default function CircularPipeline({
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [currentStep, isPlaying, autoStart])
+  }, [currentStep, isPlaying, autoStart, isInView])
 
+  // Scroll visibility handler
   useEffect(() => {
-    if (isOpen && isInView && autoStart && !isPlaying && currentStep === -1) {
-      const timer = setTimeout(() => {
-        setCurrentStep(0)
+    if (!autoStart || !isOpen) return
+
+    const timer = setTimeout(() => {
+      if (isInView) {
         setIsPlaying(true)
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, isInView, autoStart, isPlaying, currentStep])
+        setCurrentStep((prev) => {
+          if (prev === -1 || prev >= PIPELINE_STEPS.length) {
+            return 0
+          }
+          return prev
+        })
+      } else {
+        setIsPlaying(false)
+      }
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [isInView, autoStart, isOpen])
 
   const content = (
     <div
@@ -246,8 +257,8 @@ export default function CircularPipeline({
             className={`absolute inset-6 border border-dashed rounded-full transition-all duration-1000 ${isPlaying && currentStep < 10 ? 'border-amber-500/30 animate-[spin_15s_linear_infinite_reverse]' : 'border-slate-200 dark:border-slate-800 opacity-30'}`}
           />
 
-          <div className="text-2xl font-mono font-bold tracking-[0.2em] text-slate-900 dark:text-white z-10 mt-1">
-            GRIDLOCK AI
+          <div className="text-3xl font-mono font-bold tracking-[0.3em] text-slate-900 dark:text-white z-10 text-center pl-[0.3em]">
+            GRIDLOCK
           </div>
 
           {currentStep >= 10 && (
@@ -256,7 +267,7 @@ export default function CircularPipeline({
         </div>
 
         {/* Nodes (HTML Absolute Positioning - NO CONTAINER ROTATION) */}
-        {nodes.map((node, i) => {
+        {nodes.map((node) => {
           const Icon = node.icon
           const isPending = node.state === 'pending'
           const isProcessing = node.state === 'processing'
@@ -265,7 +276,6 @@ export default function CircularPipeline({
           // Determine label positioning based on angle
           // Right half: text on right. Left half: text on left.
           const isRight = node.x >= center
-          const isBottom = node.y >= center
 
           return (
             <div
@@ -320,9 +330,13 @@ export default function CircularPipeline({
                   className={`
                     absolute pointer-events-none whitespace-nowrap flex flex-col
                     transition-all duration-500
-                    ${isRight ? 'left-full ml-4 items-start' : 'right-full mr-4 items-end'}
+                    ${isRight ? 'left-full ml-5 items-start' : 'right-full mr-5 items-end'}
                     ${isPending ? 'opacity-30' : 'opacity-100'}
                   `}
+                  style={{
+                    marginTop:
+                      node.y < center - 50 ? '-30px' : node.y > center + 50 ? '30px' : '0px',
+                  }}
                 >
                   <span
                     className={`
