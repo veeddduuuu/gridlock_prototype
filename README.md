@@ -249,46 +249,30 @@ The ML service (FastAPI, Python) exposes 9 endpoints consumed by the backend.
 ```mermaid
 
 graph TD
-    A["Input Event"] --> B["Feature Engineering<br/>(Encoders + FeaturePipeline F4/F5)"]
-    B --> C{"Artifact Format?"}
-    C -- "Tournament Winner" --> D["Tuned RandomForest<br/>(selected via tournament)"]
-    C -- "Legacy" --> E["LGB multi-seed + CatBoost<br/>blend_weight ensemble"]
-    D --> I["log1p → expm1 → duration_mins"]
+    A["Input Event"] --> B["1. Feature Engineering<br/>(Encoders + Feature Sets)"]
+    B --> C{"2. Artifact Format?"}
+    C -- "Tournament Winner" --> D["Tuned RandomForest"]
+    C -- "Legacy" --> E["LGB + CatBoost Ensemble"]
+    D --> I["3. Inverse Transform<br/>(log1p → expm1 → duration_mins)"]
     E --> I
-    E --> I
-    I --> J["Severity Score Engineering"]
-    I --> K["Conformal Interval<br/>(corridor → severity → global fallback)"]
-    I --> L["Dynamic Confidence<br/>(ensemble variance penalty)"]
-    I --> M["Fingerprint Search<br/>(haversine + hour + cause similarity)"]
+    I --> J["4a. Severity Score Engineering"]
+    I --> L["4b. Dynamic Confidence"]
+    I --> K["5. Conformal Intervals<br/>(corridor → severity → global)"]
+    I --> M["6. Spatial Fingerprinting<br/>(haversine + hour + cause similarity)"]
 ```
 
 ### ML Prediction Pipeline Architecture
 
-Rather than a simple training loop, the GridLock ML prediction engine executes a highly sophisticated, multi-stage pipeline for every incoming event. This pipeline progresses from raw ingestion to calibrated uncertainty and explainable outputs:
+Rather than a simple training loop, the GridLock ML prediction engine executes a highly sophisticated, multi-stage pipeline for every incoming event. 
 
-1. **Feature Engineering & Transformation**
-   - The raw event data is pushed through spatial `Encoders`. It leverages advanced Feature Sets such as **Smoothed Mean Target Encoding & WOE Encoding** alongside **Polynomial, PCA, and Interaction Terms** to capture complex data relationships.
-   - Generates derived topological features, road capacity indexes, and cyclical temporal encodings.
-
-2. **Model Selection & Core Inference**
-   - The pipeline checks the registered artifact format to route the request:
-     - **Tournament Winner Branch:** Utilizes the primary registered model (a tuned RandomForest, selected via a model tournament).
-     - **Legacy Branch:** Falls back to a heavily tested multi-seed LightGBM + CatBoost blended ensemble.
-
-3. **Target Inverse Transformation**
-   - The core models predict in a stabilized logarithmic space. The outputs are passed through an `expm1` (exponential minus 1) function to translate the `log1p` outputs back into real-world minutes (`duration_mins`).
-
-4. **Severity Engineering & Confidence Scoring**
-   - **Severity Score:** Synthesizes the predicted duration, event type, and the spatial properties of the network into a normalized severity index.
-   - **Dynamic Confidence:** Penalizes the certainty score based on the ensemble's internal variance; high disagreement among the underlying trees/models strictly reduces the reported confidence.
-
-5. **Uncertainty Calibration (Conformal Intervals)**
-   - Computes rigorous upper and lower prediction bounds to guarantee mathematical coverage limits.
-   - It uses a cascading fallback hierarchy: attempting granular corridor-level calibration first, falling back to severity-bucket calibration, and finally a global fallback if data is scarce.
-
-6. **Explainability (Spatial Fingerprinting)**
-   - Projects the active event into a multidimensional latent space utilizing haversine spatial distance, temporal proximity (hour of day), and cause similarity.
-   - Performs a K-Nearest Neighbors search to retrieve the most statistically similar historical events, providing human-readable context and precedent to traffic operators.
+| Stage | Component | Description | Key Details |
+|:---|:---|:---|:---|
+| **1** | **Feature Engineering** | Transforms raw event data into a standardized feature matrix. | Spatial `Encoders`, Target & WOE Encoding, PCA, Interaction terms. |
+| **2** | **Model Selection & Inference** | Evaluates artifact format and routes to the appropriate model. | **Tournament**: Tuned RandomForest<br>**Legacy**: LGB + CatBoost blend. |
+| **3** | **Inverse Transformation** | Translates stable logarithmic predictions back to real minutes. | `log1p` → `expm1` → `duration_mins`. |
+| **4** | **Severity & Confidence** | Synthesizes an index and penalizes uncertainty. | **Severity**: Normalizes event/network stats.<br>**Confidence**: Ensemble variance penalty. |
+| **5** | **Uncertainty Calibration** | Computes rigorous prediction bounds via Conformal Intervals. | Cascades: Corridor → Severity → Global fallback. |
+| **6** | **Explainability** | Retrieves statistically similar historical precedents via KNN. | Matches on haversine distance, hour of day, and cause. |
 
 ### Pipeline Outputs & Metrics
 
