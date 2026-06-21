@@ -225,7 +225,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative flex flex-col bg-background font-sans">
+    <div className="relative flex flex-col bg-black/40 font-sans">
       {/* ── Navbar ─────────────────────────────────────────────────── */}
       <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-4 md:px-12 backdrop-blur-xl bg-background/70 border-b border-border/50">
         <div className="flex items-center gap-2.5">

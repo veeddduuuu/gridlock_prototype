@@ -55,7 +55,7 @@ const FleetLogin: React.FC = () => {
   return (
     <div className="min-h-screen w-full flex flex-row-reverse">
       {/* Left Side - Login Form (Flipped to right for Fleet) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-transparent">
         <div className="w-full max-w-md space-y-8 animate-fade-in">
           {/* Logo and Header */}
           <div className="flex flex-col items-center text-center space-y-2">

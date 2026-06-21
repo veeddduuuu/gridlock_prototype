@@ -251,7 +251,7 @@ export default function FleetDashboard() {
   const pendingCount = assignments.filter((a) => a.status !== 'completed').length
 
   return (
-    <div className="flex h-screen flex-col bg-background dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:to-slate-950">
+    <div className="flex h-screen flex-col bg-transparent">
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -8 }}
