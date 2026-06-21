@@ -82,12 +82,7 @@ The system serves two user roles: **Controllers** (command center operators) and
 GridLock is a monorepo with four services: a React frontend, a Node.js/Express backend, a Python FastAPI ML service, and Redis as the shared state and messaging layer.
 
 ``` mermaid
----
-config:
-  theme: mc
-  look: handDrawn
-  fontFamily: "'Recursive Variable', sans-serif"
----
+
 flowchart LR
 
 %% =========================
@@ -175,12 +170,6 @@ MLC --> MLP
 API -->|Distance Matrix| MAPPLS
 API -->|LLM Analysis| GROQ
 
-%% =========================
-%% STYLING
-%% =========================
-classDef Ash fill:#EEEEEE,stroke:#999999,color:#000000;
-
-class LP,CD,FD,API,WSS,PW,MLP,MLA,MLQ,MLF,MLC,PG,RD,GROQ,MAPPLS Ash;
 ```
 
 **External dependencies:**
@@ -205,24 +194,7 @@ class LP,CD,FD,API,WSS,PW,MLP,MLA,MLQ,MLF,MLC,PG,RD,GROQ,MAPPLS Ash;
 Every event — planned or unplanned — triggers this pipeline synchronously before returning a response to the controller.
 
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
 
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 graph TD
     A["1. INSERT event (status='planned')"] --> B["2. ML Prediction<br/>(duration + severity + confidence + conformal interval)"]
     B --> C["3a. Queue Analysis<br/>(M/M/c/K blocking probability + tandem spillback)"]
@@ -275,24 +247,7 @@ The ML service (FastAPI, Python) exposes 9 endpoints consumed by the backend.
 
 ### Prediction Flow
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
 
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 graph TD
     A["Input Event"] --> B["Feature Engineering<br/>(Encoders + FeaturePipeline F4/F5)"]
     B --> C{"Artifact Format?"}
@@ -351,24 +306,6 @@ The backend hosts six core services that power the planning pipeline. Each runs 
 All LLM calls go through **Groq**. Each service has a hard deterministic fallback so LLM outages do not interrupt operations.
 
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
-
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 graph LR
     GROQ(["Groq-hosted LLM"])
 
@@ -416,24 +353,6 @@ graph LR
 Four tables. Events carry the full planning output as JSONB columns so all pipeline stages are persisted in a single row update.
 
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
-
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 erDiagram
     events ||--o{ fleet_assignments : "has"
     events ||--o{ barricades : "has"
@@ -522,24 +441,6 @@ erDiagram
 ```
 
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
-
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 graph TD
     R["/"] --> LP["LandingPage (Public)"]
     R2["/login/controller"] --> CL["ControllerLogin"]
@@ -578,24 +479,6 @@ graph TD
 The full system runs as a single **Docker Compose** stack with five containers:
 
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
-
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 graph LR
     subgraph "docker-compose"
         REDIS["redis<br/>redis:7-alpine<br/>:6379<br/>Pub/Sub · BullMQ · State store"]
@@ -669,25 +552,8 @@ Redis Pub/Sub: controller:fleet_locations
   │
 WebSocket → Controller dashboard: fleet markers updated on map
 ```
+
 ```mermaid
----
-config:
-  theme: base
-  look: handDrawn
-  themeVariables:
-    primaryColor: "#F6F3D6"
-    primaryBorderColor: "#B8B25A"
-    primaryTextColor: "#222222"
-
-    secondaryColor: "#EEECC8"
-    secondaryBorderColor: "#B8B25A"
-
-    tertiaryColor: "#F9F8E8"
-
-    lineColor: "#555555"
-
-    fontFamily: "'Recursive Variable', sans-serif"
----
 sequenceDiagram
     participant FE as Frontend
     participant WS as WebSocket
