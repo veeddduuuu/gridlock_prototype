@@ -14,7 +14,7 @@ import {
 import { useEffect, useState } from 'react'
 
 import type { PlannedEvent, PropagationTick } from '../../../types'
-import { assignFleetMember } from '../../../utils/api'
+import { assignFleetMember, confirmBarricade } from '../../../utils/api'
 
 interface Props {
   event: PlannedEvent
@@ -126,6 +126,8 @@ export default function LiveEventDetailsCard({
   const [elapsedMins, setElapsedMins] = useState(0)
   const [deployLoading, setDeployLoading] = useState<string | null>(null)
   const [deployAllLoading, setDeployAllLoading] = useState(false)
+  const [barricadeDeployLoading, setBarricadeDeployLoading] = useState<string | null>(null)
+  const [barricadeDeployAllLoading, setBarricadeDeployAllLoading] = useState(false)
 
   // Merge backend assignments with recommended ones
   const backendAssignments = assignments || []
@@ -194,6 +196,31 @@ export default function LiveEventDetailsCard({
     }
   }
 
+  const handleDeployBarricade = async (barricade: any) => {
+    setBarricadeDeployLoading(barricade.id)
+    try {
+      await confirmBarricade(event.id, barricade.id)
+      if (onAssignFleet) onAssignFleet()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBarricadeDeployLoading(null)
+    }
+  }
+
+  const handleDeployAllBarricades = async () => {
+    setBarricadeDeployAllLoading(true)
+    try {
+      const pending = barricades.filter((b) => b.status === 'recommended')
+      await Promise.all(pending.map((b) => confirmBarricade(event.id, b.id)))
+      if (onAssignFleet) onAssignFleet()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBarricadeDeployAllLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!event.start_datetime) return
     const startTime = new Date(event.start_datetime).getTime()
@@ -211,10 +238,7 @@ export default function LiveEventDetailsCard({
   const predicted = event.predicted_duration_mins || 0
   const isRecovered = event.status === 'resolved' || event.status === 'closed'
   const isFuture = elapsedMins < 0
-  // "Overdue" only applies to an incident that is actually running. A planned event with a
-  // back-dated start must not show a giant overdue from (now - past start).
-  const isOverdue =
-    event.status === 'active' && !isRecovered && !isFuture && elapsedMins >= predicted
+  const isOverdue = !isRecovered && !isFuture && elapsedMins >= predicted
 
   const startsInMins = Math.max(0, Math.ceil(-elapsedMins))
   const remainingMins = Math.max(0, Math.ceil(predicted - Math.max(0, elapsedMins)))
@@ -438,9 +462,24 @@ export default function LiveEventDetailsCard({
               <Construction size={14} className="text-orange-500" />
               Barricade Layout
             </span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full">
-              {confirmedBarricadesCount} / {barricades.length} Placed
-            </span>
+            <div className="flex items-center gap-2">
+              {barricades.some((b) => b.status === 'recommended') && (
+                <button
+                  onClick={handleDeployAllBarricades}
+                  className="text-[10px] font-bold bg-orange-600 hover:bg-orange-700 text-white px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
+                >
+                  {barricadeDeployAllLoading ? (
+                    <Loader2 size={10} className="animate-spin" />
+                  ) : (
+                    <Send size={10} />
+                  )}
+                  Place All
+                </button>
+              )}
+              <span className="text-[10px] font-bold text-muted-foreground uppercase bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full">
+                {confirmedBarricadesCount} / {barricades.length} Placed
+              </span>
+            </div>
           </div>
 
           {barricades.length === 0 ? (
@@ -458,7 +497,7 @@ export default function LiveEventDetailsCard({
               {barricades.map((barricade) => (
                 <div
                   key={barricade.id}
-                  className="flex items-center justify-between p-2 rounded-lg border border-border bg-background hover:bg-muted/10 transition-colors"
+                  className="relative group overflow-hidden flex items-center justify-between p-2 rounded-lg border border-border bg-background hover:bg-muted/10 transition-colors"
                 >
                   <div className="flex flex-col min-w-0">
                     <span className="text-xs font-semibold text-foreground truncate flex items-center gap-1">
@@ -473,6 +512,23 @@ export default function LiveEventDetailsCard({
                   <div className="shrink-0 ml-2">
                     {getBarricadeStatusBadge(barricade.status, isRecovered)}
                   </div>
+
+                  {barricade.status === 'recommended' && !isRecovered && (
+                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={() => handleDeployBarricade(barricade)}
+                        disabled={barricadeDeployLoading === barricade.id}
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold px-3 py-1 rounded shadow-sm flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {barricadeDeployLoading === barricade.id ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Send size={12} />
+                        )}
+                        Place Barricade
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

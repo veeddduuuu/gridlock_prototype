@@ -75,6 +75,11 @@ export class SimulationService {
 
     // 1. Propagate to neighbors
     for (const nodeId of nodesToPropagate) {
+      // If the current node is barricaded, it cannot spread congestion to neighbors
+      if (interventions.barricades.includes(nodeId)) {
+        continue
+      }
+
       const nodeData = newState.activeNodes[nodeId]
 
       // Only nodes with sufficient intensity can propagate

@@ -92,4 +92,8 @@ export const removePropagationJob = async (eventId: string) => {
     await propagationQueue.removeRepeatableByKey(jobToRemove.key)
     console.log(`[Queue] Removed propagation job for event ${eventId}`)
   }
+
+  // Clean up redis state so stale events don't trigger gridlock merges
+  await redisConnection.del(`propagation_state:${eventId}`)
+  await redisConnection.del(`interventions:${eventId}`)
 }
