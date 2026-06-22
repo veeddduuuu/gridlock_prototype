@@ -1,4 +1,5 @@
 import { Calendar, ChevronRight, Clock, MapPin, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import type { PlannedEvent } from '../../types'
 
@@ -16,12 +17,14 @@ const STATUS_CLASSES: Record<string, string> = {
 }
 
 export default function EventList({ events, selectedId, onSelect, onClose }: Props) {
+  const { t } = useTranslation()
+
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
         <Calendar size={24} className="opacity-50" />
-        <p className="text-sm font-medium">No events planned</p>
-        <span className="text-xs">Create your first event above</span>
+        <p className="text-sm font-medium">{t('eventList.noEvents')}</p>
+        <span className="text-xs">{t('eventList.createFirst')}</span>
       </div>
     )
   }

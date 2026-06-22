@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Bell, LogOut, Waypoints, WifiOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ interface HeaderProps {
 
 export default function Header({ wsConnected, activeEvents }: HeaderProps) {
   const { user, logout } = useAuth()
+  const { t } = useTranslation()
 
   return (
     <motion.header
@@ -32,7 +34,9 @@ export default function Header({ wsConnected, activeEvents }: HeaderProps) {
             GridLock
           </h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {user?.role === 'controller' ? 'Command Center' : 'Field Operations'}
+            {user?.role === 'controller'
+              ? t('dashboard.commandCenter')
+              : t('dashboard.fieldOperations')}
           </p>
         </div>
       </div>
@@ -46,12 +50,12 @@ export default function Header({ wsConnected, activeEvents }: HeaderProps) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            Live
+            {t('dashboard.live')}
           </div>
         ) : (
           <div className="flex items-center gap-1.5 rounded-full border border-destructive/20 bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive">
             <WifiOff size={11} />
-            Offline
+            {t('dashboard.offline')}
           </div>
         )}
 

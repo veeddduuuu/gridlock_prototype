@@ -1,0 +1,174 @@
+{
+  "nav": {
+    "features": "Features",
+    "howItWorks": "How It Works",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "title": "The Traffic Bottleneck Ends Here",
+    "subtitle": "Clear congestion before it happens with ",
+    "description": "Transform reactive traffic control into a proactive science. GridLock leverages graph simulation and ML fingerprinting to anticipate congestion spread, automatically dispatch fleets, and deploy barricades—all unified on MapMyIndia."
+  },
+  "features": {
+    "sectionLabel": "Platform Capabilities",
+    "title": "Everything you need for smarter cities",
+    "description": "Built for scale. Designed for the chaos of real-world traffic management."
+  },
+  "demo": {
+    "sectionLabel": "Live Engine Demo",
+    "title": "The GridLock Pipeline in Action",
+    "description": "Watch our 10-step sequence flow seamlessly from event ingestion through machine learning prediction and kinematic fluid dynamics."
+  },
+  "featuresList": {
+    "bfsTitle": "Graph BFS Propagation Engine",
+    "bfsDesc": "Simulates real-time queue spillback and congestion spread on a live road graph, mapping exactly where gridlock will hit next.",
+    "mlTitle": "ML Event Fingerprinting",
+    "mlDesc": "Pattern-matches live incidents against thousands of historical analogues to instantly predict severity, duration, and clearance times.",
+    "llmTitle": "LLM-Powered Interventions",
+    "llmDesc": "Large language models dynamically recommend optimal barricade placements and generate alternative routing strategies to choke off congestion.",
+    "mmiTitle": "Powered by MapMyIndia",
+    "mmiDesc": "Enterprise-grade geocoding and mapping infrastructure provides the highly accurate spatial context required for our AI simulations."
+  },
+  "stats": {
+    "forecast": "Congestion Forecast",
+    "fingerprints": "Incident Fingerprints",
+    "coverage": "Forecast Coverage",
+    "mission": "Unified Mission"
+  },
+  "steps": {
+    "detectTitle": "Detect",
+    "detectDesc": "Live data from city infrastructure flows into the platform, instantly highlighting anomalies and traffic buildup.",
+    "anticipateTitle": "Anticipate",
+    "anticipateDesc": "The system forecasts congestion spread, recommending barricade deployments and resource allocation before gridlock occurs.",
+    "dispatchTitle": "Dispatch",
+    "dispatchDesc": "Controllers issue routing orders and barricade plans. Fleet units receive them instantly on their MapMyIndia-powered mobile workspace.",
+    "resolveTitle": "Resolve",
+    "resolveDesc": "Officers clear incidents on-site. The dashboard updates in real-time, restoring normal traffic flow patterns automatically."
+  },
+  "howItWorks": {
+    "sectionLabel": "How It Works",
+    "title": "From raw data to resolved incidents",
+    "description": "Four seamless stages power the GridLock pipeline, end to end."
+  },
+  "systemChatter": {
+    "title": "sys_chatter.log",
+    "log1": "[SYS] Ingesting live traffic feed...",
+    "log2": "[ML_ENGINE] Fingerprint matched: 2,497 analogues.",
+    "log3": "[GRAPH_BFS] Node 42A -> Node 42B spillback predicted.",
+    "log4": "[BAR_RECOMMEND] Critical junction identified.",
+    "log5": "[DISPATCH] Rerouting Unit 04 via MapMyIndia APIs...",
+    "log6": "[SYS] Congestion decay accelerated by 1.5x."
+  },
+  "commandCenter": {
+    "title": "GridLock Command Center",
+    "liveMetrics": "Live Metrics",
+    "active": "Active",
+    "fleet": "Fleet",
+    "recentAlerts": "Recent Alerts",
+    "alert1Title": "Severe Congestion",
+    "alert1Loc": "Siddalingaiah Circle",
+    "alert1Time": "Just now",
+    "alert2Title": "Barricade Deployed",
+    "alert2Loc": "MG Road Junction",
+    "alert2Time": "2m ago",
+    "alert3Title": "Officer Dispatched",
+    "alert3Loc": "Koramangala 80ft",
+    "alert3Time": "5m ago",
+    "unit": "Unit 04",
+    "barricade": "Barricade",
+    "poweredBy": "Powered by MapMyIndia"
+  },
+  "roleSelection": {
+    "sectionLabel": "Choose Your Role",
+    "title": "Select your workspace",
+    "description": "Two dedicated interfaces. One unified mission.",
+    "controllerTitle": "Controller",
+    "controllerDesc": "Full tactical view. Authorize barricades, verify ML fingerprints, and command the fleet in real-time.",
+    "fleetTitle": "Fleet Unit",
+    "fleetDesc": "Mobile-first execution. Receive map-accurate dispatch orders and clear incidents on the ground."
+  },
+  "footer": {
+    "copyright": "© 2026 GridLock. The traffic bottleneck ends here.",
+    "product": "Product",
+    "features": "Features",
+    "security": "Security",
+    "docs": "Documentation",
+    "legal": "Legal",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  },
+  "misc": {
+    "learnMore": "Learn more"
+  },
+  "cta": {
+    "title": "Ready to transform your city's traffic?",
+    "description": "Join the growing network of municipalities using GridLock to build safer, faster, and smarter transportation systems.",
+    "button": "Get Started Now"
+  },
+  "dashboard": {
+    "commandCenter": "Command Center",
+    "fieldOperations": "Field Operations",
+    "live": "Live",
+    "offline": "Offline",
+    "navigation": "Navigation",
+    "aiAssistant": "AI Assistant"
+  },
+  "navItems": {
+    "liveMap": "Live Map",
+    "overview": "Overview",
+    "performance": "Performance",
+    "reports": "Reports",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "controlPanel": {
+    "title": "Control Panel",
+    "subtitle": "Plan events & dispatch resources",
+    "recentPlans": "Recent Plans",
+    "viewAll": "View All"
+  },
+  "eventList": {
+    "noEvents": "No events planned",
+    "createFirst": "Create your first event above"
+  },
+  "eventDetails": {
+    "onSite": "ON SITE",
+    "completed": "COMPLETED",
+    "enRoute": "EN ROUTE",
+    "deploymentRequested": "DEPLOYMENT REQUESTED",
+    "proposed": "PROPOSED",
+    "blocked": "BLOCKED",
+    "safeToDemobilize": "SAFE TO DEMOBILIZE",
+    "active": "ACTIVE",
+    "removed": "REMOVED",
+    "syncing": "Syncing live dispatch statuses...",
+    "severityScore": "Severity Score",
+    "label": "Label:",
+    "clearedIn": "Cleared In",
+    "startsIn": "Starts In",
+    "overdueBy": "Overdue By",
+    "remainingTime": "Remaining Time",
+    "mins": "mins",
+    "totalDuration": "Total Incident Duration",
+    "of": "Of",
+    "predicted": "mins predicted",
+    "fleetDeployment": "Fleet Deployment",
+    "deployAll": "Deploy All",
+    "deployed": "Deployed",
+    "noPersonnel": "No personnel assigned to event",
+    "deploy": "Deploy",
+    "barricadeLayout": "Barricade Layout",
+    "placeAll": "Place All",
+    "placed": "Placed",
+    "noBarricades": "No barricades recommended",
+    "placeBarricade": "Place Barricade",
+    "diversionRoutes": "Diversion Routes",
+    "recommended": "Recommended",
+    "noDiversion": "No diversion recommended",
+    "blockedRoute": "Blocked:",
+    "detour": "Detour:",
+    "divertAt": "Divert at",
+    "rejoinAt": "Rejoin at",
+    "handOffTo": "Hand off to"
+  }
+}

@@ -329,7 +329,17 @@ function runPropagationForecast(lat: number, lon: number, severity: number, dura
       )
     }
     ticksSoFar = cp.ticks
-    forecasts[cp.label] = { ...currentState }
+
+    const enrichedActiveNodes: Record<string, any> = {}
+    for (const [nodeId, data] of Object.entries(currentState.activeNodes)) {
+      const junction = graphService.junctions.get(nodeId)
+      enrichedActiveNodes[nodeId] = {
+        ...data,
+        name: junction?.name || nodeId,
+      }
+    }
+
+    forecasts[cp.label] = { ...currentState, activeNodes: enrichedActiveNodes }
   }
 
   return forecasts

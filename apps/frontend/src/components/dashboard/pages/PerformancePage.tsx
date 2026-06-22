@@ -10,7 +10,7 @@ import DeploymentBarChart from '../../charts/DeploymentBarChart'
 import type { DashboardOutletContext } from '../AppLayout'
 
 export default function PerformancePage() {
-  const { pipelineResult } = useOutletContext<DashboardOutletContext>()
+  const { pipelineResult, selectedEventAssignments } = useOutletContext<DashboardOutletContext>()
 
   if (!pipelineResult) {
     return (
@@ -34,6 +34,58 @@ export default function PerformancePage() {
 
   const { fleet_plan, barricade_plan, gating_plan } = pipelineResult
 
+  // Merge live assignments into the fleet plan so the Performance page reflects real dispatched fleet
+  const mergedDeployments = (fleet_plan.deployments || []).map((d) => ({
+    ...d,
+    assignedFleet: [...(d.assignedFleet || [])],
+  }))
+
+  if (selectedEventAssignments && selectedEventAssignments.length > 0) {
+    selectedEventAssignments.forEach((assignment) => {
+      const existing = mergedDeployments.find(
+        (d) =>
+          (d.junctionName === assignment.junction_name ||
+            d.junction === assignment.junction_name) &&
+          d.role === assignment.role,
+      )
+
+      if (existing) {
+        const alreadyAssigned = existing.assignedFleet.some((f) => f.user_id === assignment.user_id)
+        if (!alreadyAssigned) {
+          existing.assignedFleet.push({
+            user_id: assignment.user_id,
+            user_name: assignment.user_name || 'Unknown Officer',
+          })
+          existing.fleet_count = Math.max(existing.fleet_count, existing.assignedFleet.length)
+        }
+      } else {
+        mergedDeployments.push({
+          junction: assignment.junction_name,
+          junctionName: assignment.junction_name,
+          fleet_count: 1,
+          role: assignment.role,
+          priority: assignment.priority || 'Medium',
+          deployByMins: 0,
+          assignedFleet: [
+            {
+              user_id: assignment.user_id,
+              user_name: assignment.user_name || 'Unknown Officer',
+            },
+          ],
+        })
+      }
+    })
+  }
+
+  const mergedFleetPlan = {
+    ...fleet_plan,
+    deployments: mergedDeployments,
+    total_fleet_required: Math.max(
+      fleet_plan.total_fleet_required || 0,
+      mergedDeployments.reduce((sum, d) => sum + d.fleet_count, 0),
+    ),
+  }
+
   return (
     <div className="h-full overflow-y-auto p-8">
       <div className="mb-6">
@@ -56,8 +108,8 @@ export default function PerformancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[280px]">
-            {fleet_plan.deployments?.length ? (
-              <DeploymentBarChart items={fleet_plan.deployments} />
+            {mergedFleetPlan.deployments?.length ? (
+              <DeploymentBarChart items={mergedFleetPlan.deployments} />
             ) : (
               <div className="flex h-full items-center justify-center text-lg text-muted-foreground">
                 No deployments recommended
@@ -78,7 +130,7 @@ export default function PerformancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <FleetRecommendationCard plan={fleet_plan} />
+            <FleetRecommendationCard plan={mergedFleetPlan} />
           </CardContent>
         </Card>
 

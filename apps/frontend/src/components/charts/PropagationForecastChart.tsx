@@ -33,10 +33,20 @@ function affectedCount(state: unknown): number {
   return nodes && typeof nodes === 'object' ? Object.keys(nodes).length : 0
 }
 
+function affectedNames(state: unknown): string[] {
+  if (!state || typeof state !== 'object') return []
+  const nodes = (state as { activeNodes?: Record<string, { name?: string }> }).activeNodes
+  if (!nodes || typeof nodes !== 'object') return []
+  return Object.values(nodes)
+    .map((n) => n.name)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0)
+}
+
 export default function PropagationForecastChart({ forecast }: Props) {
   const points = CHECKPOINTS.filter((c) => forecast && c.key in forecast).map((c) => ({
     label: c.label,
     count: affectedCount(forecast[c.key]),
+    names: affectedNames(forecast[c.key]),
   }))
 
   if (points.length === 0) {
@@ -50,6 +60,7 @@ export default function PropagationForecastChart({ forecast }: Props) {
   // T+0 = the incident's own junction (the simulation starts from a single node).
   const labels = ['T+0', ...points.map((p) => p.label)]
   const data = [1, ...points.map((p) => p.count)]
+  const namesByPoint = [['Incident Origin'], ...points.map((p) => p.names)]
 
   return (
     <Line
@@ -75,7 +86,24 @@ export default function PropagationForecastChart({ forecast }: Props) {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.parsed.y} junction${ctx.parsed.y === 1 ? '' : 's'} congested`,
+              label: (ctx) => {
+                const count = ctx.parsed.y
+                const baseLabel = `${count} junction${count === 1 ? '' : 's'} congested`
+                const nodeNames = namesByPoint[ctx.dataIndex]
+
+                if (nodeNames && nodeNames.length > 0) {
+                  if (nodeNames.length <= 5) {
+                    return [baseLabel, ...nodeNames.map((n) => `• ${n}`)]
+                  } else {
+                    return [
+                      baseLabel,
+                      ...nodeNames.slice(0, 5).map((n) => `• ${n}`),
+                      `...and ${nodeNames.length - 5} more`,
+                    ]
+                  }
+                }
+                return baseLabel
+              },
             },
           },
         },

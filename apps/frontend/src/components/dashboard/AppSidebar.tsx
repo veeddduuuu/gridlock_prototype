@@ -8,17 +8,18 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { to: '/dashboard/map', label: 'Live Map', icon: Map },
-  { to: '/dashboard/overview', label: 'Overview', icon: Gauge },
-  { to: '/dashboard/performance', label: 'Performance', icon: SlidersHorizontal },
-  { to: '/dashboard/reports', label: 'Reports', icon: FileBarChart },
-  { to: '/dashboard/history', label: 'History', icon: History },
-  { to: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { to: '/dashboard/map', labelKey: 'navItems.liveMap', icon: Map },
+  { to: '/dashboard/overview', labelKey: 'navItems.overview', icon: Gauge },
+  { to: '/dashboard/performance', labelKey: 'navItems.performance', icon: SlidersHorizontal },
+  { to: '/dashboard/reports', labelKey: 'navItems.reports', icon: FileBarChart },
+  { to: '/dashboard/history', labelKey: 'navItems.history', icon: History },
+  { to: '/dashboard/settings', labelKey: 'navItems.settings', icon: Settings },
 ] as const
 
 const sidebarVariants: Variants = {
@@ -44,6 +45,7 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ chatOpen, onChatToggle }: AppSidebarProps) {
   const location = useLocation()
+  const { t } = useTranslation()
 
   return (
     <motion.nav
@@ -56,11 +58,11 @@ export default function AppSidebar({ chatOpen, onChatToggle }: AppSidebarProps) 
         variants={itemVariants}
         className="px-3 pb-3 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase"
       >
-        Navigation
+        {t('dashboard.navigation')}
       </motion.span>
 
       <div className="flex flex-col gap-0.5">
-        {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => {
           const isActive = location.pathname === to
           return (
             <motion.div key={to} variants={itemVariants}>
@@ -81,7 +83,7 @@ export default function AppSidebar({ chatOpen, onChatToggle }: AppSidebarProps) 
                   />
                 )}
                 <Icon size={16} className="shrink-0" />
-                {label}
+                {t(labelKey)}
               </NavLink>
             </motion.div>
           )
@@ -108,7 +110,7 @@ export default function AppSidebar({ chatOpen, onChatToggle }: AppSidebarProps) 
               chatOpen ? 'text-primary-foreground' : 'text-primary',
             )}
           />
-          <span>AI Assistant</span>
+          <span>{t('dashboard.aiAssistant')}</span>
 
           {!chatOpen && (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 flex h-1.5 w-1.5">
