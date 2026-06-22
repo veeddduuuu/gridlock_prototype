@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { PlannedEvent, PropagationTick } from '../../../types'
 import { assignFleetMember, confirmBarricade } from '../../../utils/api'
@@ -27,48 +28,48 @@ interface Props {
   onAssignFleet?: () => void
 }
 
-const getFleetStatusBadge = (status: string) => {
+const getFleetStatusBadge = (status: string, t: any) => {
   switch (status) {
     case 'on_site':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-          ON SITE
+          {t('eventDetails.onSite')}
         </span>
       )
     case 'completed':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          COMPLETED
+          {t('eventDetails.completed')}
         </span>
       )
     case 'en_route':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" />
-          EN ROUTE
+          {t('eventDetails.enRoute')}
         </span>
       )
     case 'pending':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-yellow-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-          DEPLOYMENT REQUESTED
+          {t('eventDetails.deploymentRequested')}
         </span>
       )
     case 'recommended':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-dashed border-border">
           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-          PROPOSED
+          {t('eventDetails.proposed')}
         </span>
       )
     case 'blocked':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">
           <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-          BLOCKED
+          {t('eventDetails.blocked')}
         </span>
       )
     default:
@@ -80,11 +81,11 @@ const getFleetStatusBadge = (status: string) => {
   }
 }
 
-const getBarricadeStatusBadge = (status: string, isDemobilized?: boolean) => {
+const getBarricadeStatusBadge = (status: string, isDemobilized: boolean | undefined, t: any) => {
   if (isDemobilized) {
     return (
       <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/25">
-        SAFE TO DEMOBILIZE
+        {t('eventDetails.safeToDemobilize')}
       </span>
     )
   }
@@ -94,20 +95,20 @@ const getBarricadeStatusBadge = (status: string, isDemobilized?: boolean) => {
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/25">
           <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-          ACTIVE
+          {t('eventDetails.active')}
         </span>
       )
     case 'recommended':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-md border border-dashed border-yellow-500/25">
           <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-          PROPOSED
+          {t('eventDetails.proposed')}
         </span>
       )
     case 'removed':
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-          REMOVED
+          {t('eventDetails.removed')}
         </span>
       )
     default:
@@ -124,6 +125,7 @@ export default function LiveEventDetailsCard({
   onClose,
   onAssignFleet,
 }: Props) {
+  const { t } = useTranslation()
   const [elapsedMins, setElapsedMins] = useState(0)
   const [deployLoading, setDeployLoading] = useState<string | null>(null)
   const [deployAllLoading, setDeployAllLoading] = useState(false)
@@ -328,7 +330,7 @@ export default function LiveEventDetailsCard({
         {loading && (
           <div className="flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground bg-muted/20 rounded-lg">
             <Loader2 size={12} className="animate-spin text-primary" />
-            Syncing live dispatch statuses...
+            {t('eventDetails.syncing')}
           </div>
         )}
 
@@ -336,7 +338,7 @@ export default function LiveEventDetailsCard({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1 p-3 rounded-xl border border-border bg-muted/20">
             <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-              Severity Score
+              {t('eventDetails.severityScore')}
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-lg font-bold text-foreground transition-all duration-500">
@@ -352,7 +354,7 @@ export default function LiveEventDetailsCard({
               />
             </div>
             <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">
-              Label:{' '}
+              {t('eventDetails.label')}{' '}
               <span className="text-foreground transition-colors duration-500">
                 {severityLabel}
               </span>
@@ -364,12 +366,12 @@ export default function LiveEventDetailsCard({
               <span className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase flex items-center gap-1">
                 <Clock size={10} className="text-muted-foreground" />
                 {isRecovered
-                  ? 'Cleared In'
+                  ? t('eventDetails.clearedIn')
                   : isFuture
-                    ? 'Starts In'
+                    ? t('eventDetails.startsIn')
                     : isOverdue
-                      ? 'Overdue By'
-                      : 'Remaining Time'}
+                      ? t('eventDetails.overdueBy')
+                      : t('eventDetails.remainingTime')}
               </span>
               <div className="flex items-baseline gap-1 mt-1">
                 <span
@@ -383,13 +385,13 @@ export default function LiveEventDetailsCard({
                         ? overdueMins
                         : remainingMins}
                 </span>
-                <span className="text-xs text-muted-foreground">mins</span>
+                <span className="text-xs text-muted-foreground">{t('eventDetails.mins')}</span>
               </div>
             </div>
             <span className="text-[10px] text-muted-foreground leading-none">
               {isRecovered
-                ? 'Total Incident Duration'
-                : `Of ${Math.round(predicted)} mins predicted`}
+                ? t('eventDetails.totalDuration')
+                : `${t('eventDetails.of')} ${Math.round(predicted)} ${t('eventDetails.predicted')}`}
             </span>
           </div>
         </div>
@@ -399,7 +401,7 @@ export default function LiveEventDetailsCard({
           <div className="flex items-center justify-between border-b border-border pb-1">
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Shield size={14} className="text-blue-500" />
-              Fleet Deployment
+              {t('eventDetails.fleetDeployment')}
             </span>
             <div className="flex items-center gap-2">
               {hasProposed && (
@@ -412,11 +414,11 @@ export default function LiveEventDetailsCard({
                   ) : (
                     <Send size={10} />
                   )}
-                  Deploy All
+                  {t('eventDetails.deployAll')}
                 </button>
               )}
               <span className="text-[10px] font-bold text-muted-foreground uppercase bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
-                {displayOnSiteCount} / {displayAssignments.length} Deployed
+                {displayOnSiteCount} / {displayAssignments.length} {t('eventDetails.deployed')}
               </span>
             </div>
           </div>
@@ -424,7 +426,7 @@ export default function LiveEventDetailsCard({
           {displayAssignments.length === 0 ? (
             <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <UserCheck size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
-              <p className="text-xs text-muted-foreground">No personnel assigned to event</p>
+              <p className="text-xs text-muted-foreground">{t('eventDetails.noPersonnel')}</p>
               {(event as any).recommendation_rationale && (
                 <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
                   "{(event as any).recommendation_rationale}"
@@ -447,7 +449,7 @@ export default function LiveEventDetailsCard({
                       {assignment.user_name} • {assignment.role.replace(/_/g, ' ')}
                     </span>
                   </div>
-                  <div className="shrink-0 ml-2">{getFleetStatusBadge(assignment.status)}</div>
+                  <div className="shrink-0 ml-2">{getFleetStatusBadge(assignment.status, t)}</div>
 
                   {assignment.isRecommended && (
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -461,7 +463,7 @@ export default function LiveEventDetailsCard({
                         ) : (
                           <Send size={12} />
                         )}
-                        Deploy {assignment.user_name.split(' ')[0]}
+                        {t('eventDetails.deploy')} {assignment.user_name.split(' ')[0]}
                       </button>
                     </div>
                   )}
@@ -476,7 +478,7 @@ export default function LiveEventDetailsCard({
           <div className="flex items-center justify-between border-b border-border pb-1">
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Construction size={14} className="text-orange-500" />
-              Barricade Layout
+              {t('eventDetails.barricadeLayout')}
             </span>
             <div className="flex items-center gap-2">
               {barricades.some((b) => b.status === 'recommended') && (
@@ -489,11 +491,11 @@ export default function LiveEventDetailsCard({
                   ) : (
                     <Send size={10} />
                   )}
-                  Place All
+                  {t('eventDetails.placeAll')}
                 </button>
               )}
               <span className="text-[10px] font-bold text-muted-foreground uppercase bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-full">
-                {confirmedBarricadesCount} / {barricades.length} Placed
+                {confirmedBarricadesCount} / {barricades.length} {t('eventDetails.placed')}
               </span>
             </div>
           </div>
@@ -501,7 +503,7 @@ export default function LiveEventDetailsCard({
           {barricades.length === 0 ? (
             <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <ShieldAlert size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
-              <p className="text-xs text-muted-foreground">No barricades recommended</p>
+              <p className="text-xs text-muted-foreground">{t('eventDetails.noBarricades')}</p>
               {(event as any).barricade_rationale && (
                 <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
                   "{(event as any).barricade_rationale}"
@@ -526,7 +528,7 @@ export default function LiveEventDetailsCard({
                     </span>
                   </div>
                   <div className="shrink-0 ml-2">
-                    {getBarricadeStatusBadge(barricade.status, isRecovered)}
+                    {getBarricadeStatusBadge(barricade.status, isRecovered, t)}
                   </div>
 
                   {barricade.status === 'recommended' && !isRecovered && (
@@ -541,7 +543,7 @@ export default function LiveEventDetailsCard({
                         ) : (
                           <Send size={12} />
                         )}
-                        Place Barricade
+                        {t('eventDetails.placeBarricade')}
                       </button>
                     </div>
                   )}
@@ -556,10 +558,10 @@ export default function LiveEventDetailsCard({
           <div className="flex items-center justify-between border-b border-border pb-1">
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Navigation size={14} className="text-green-500" />
-              Diversion Routes
+              {t('eventDetails.diversionRoutes')}
             </span>
             <span className="text-[10px] font-bold uppercase bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
-              {diversionRoutes.length} Recommended
+              {diversionRoutes.length} {t('eventDetails.recommended')}
             </span>
           </div>
 
@@ -574,7 +576,7 @@ export default function LiveEventDetailsCard({
           {diversionRoutes.length === 0 ? (
             <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <Navigation size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
-              <p className="text-xs text-muted-foreground">No diversion recommended</p>
+              <p className="text-xs text-muted-foreground">{t('eventDetails.noDiversion')}</p>
               {diversionRationale && (
                 <p className="text-[10px] text-muted-foreground mt-2 italic px-2">
                   "{diversionRationale}"
@@ -590,11 +592,11 @@ export default function LiveEventDetailsCard({
                 >
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] font-bold uppercase tracking-wide bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-md shadow-sm">
-                      Blocked: {route.at_risk_corridor}
+                      {t('eventDetails.blockedRoute')} {route.at_risk_corridor}
                     </span>
                     <ArrowRight size={12} className="text-muted-foreground shrink-0" />
                     <span className="text-[10px] font-bold uppercase tracking-wide bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded-md shadow-sm">
-                      Detour: {route.via_corridor}
+                      {t('eventDetails.detour')} {route.via_corridor}
                     </span>
                   </div>
 
@@ -604,7 +606,7 @@ export default function LiveEventDetailsCard({
                         <MapPin size={12} className="text-red-500" />
                       </div>
                       <span className="text-[11px] text-muted-foreground leading-none">
-                        Divert at{' '}
+                        {t('eventDetails.divertAt')}{' '}
                         <span className="font-bold text-foreground">{route.from.name}</span>
                       </span>
                     </div>
@@ -616,7 +618,7 @@ export default function LiveEventDetailsCard({
                         <Navigation size={12} className="text-green-500" />
                       </div>
                       <span className="text-[11px] text-muted-foreground leading-none">
-                        {route.rejoins ? 'Rejoin at' : 'Hand off to'}{' '}
+                        {route.rejoins ? t('eventDetails.rejoinAt') : t('eventDetails.handOffTo')}{' '}
                         <span className="font-bold text-foreground">{route.to.name}</span>
                       </span>
                     </div>

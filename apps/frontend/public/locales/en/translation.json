@@ -104,5 +104,71 @@
     "title": "Ready to transform your city's traffic?",
     "description": "Join the growing network of municipalities using GridLock to build safer, faster, and smarter transportation systems.",
     "button": "Get Started Now"
+  },
+  "dashboard": {
+    "commandCenter": "Command Center",
+    "fieldOperations": "Field Operations",
+    "live": "Live",
+    "offline": "Offline",
+    "navigation": "Navigation",
+    "aiAssistant": "AI Assistant"
+  },
+  "navItems": {
+    "liveMap": "Live Map",
+    "overview": "Overview",
+    "performance": "Performance",
+    "reports": "Reports",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "controlPanel": {
+    "title": "Control Panel",
+    "subtitle": "Plan events & dispatch resources",
+    "recentPlans": "Recent Plans",
+    "viewAll": "View All"
+  },
+  "eventList": {
+    "noEvents": "No events planned",
+    "createFirst": "Create your first event above"
+  },
+  "eventDetails": {
+    "onSite": "ON SITE",
+    "completed": "COMPLETED",
+    "enRoute": "EN ROUTE",
+    "deploymentRequested": "DEPLOYMENT REQUESTED",
+    "proposed": "PROPOSED",
+    "blocked": "BLOCKED",
+    "safeToDemobilize": "SAFE TO DEMOBILIZE",
+    "active": "ACTIVE",
+    "removed": "REMOVED",
+    "syncing": "Syncing live dispatch statuses...",
+    "severityScore": "Severity Score",
+    "label": "Label:",
+    "clearedIn": "Cleared In",
+    "startsIn": "Starts In",
+    "overdueBy": "Overdue By",
+    "remainingTime": "Remaining Time",
+    "mins": "mins",
+    "totalDuration": "Total Incident Duration",
+    "of": "Of",
+    "predicted": "mins predicted",
+    "fleetDeployment": "Fleet Deployment",
+    "deployAll": "Deploy All",
+    "deployed": "Deployed",
+    "noPersonnel": "No personnel assigned to event",
+    "deploy": "Deploy",
+    "barricadeLayout": "Barricade Layout",
+    "placeAll": "Place All",
+    "placed": "Placed",
+    "noBarricades": "No barricades recommended",
+    "placeBarricade": "Place Barricade",
+    "diversionRoutes": "Diversion Routes",
+    "recommended": "Recommended",
+    "noDiversion": "No diversion recommended",
+    "blockedRoute": "Blocked:",
+    "detour": "Detour:",
+    "divertAt": "Divert at",
+    "rejoinAt": "Rejoin at",
+    "handOffTo": "Hand off to"
   }
 }
