@@ -563,6 +563,14 @@ export default function LiveEventDetailsCard({
             </span>
           </div>
 
+          {diversionRationale && diversionRoutes.length > 0 && (
+            <div className="px-3 py-2 rounded-lg bg-muted/30 border border-border mb-2">
+              <p className="text-[11px] text-foreground italic leading-snug">
+                {diversionRationale}
+              </p>
+            </div>
+          )}
+
           {diversionRoutes.length === 0 ? (
             <div className="text-center py-4 rounded-xl border border-dashed border-border bg-muted/5 p-3">
               <Navigation size={20} className="mx-auto text-muted-foreground opacity-40 mb-1" />
@@ -578,24 +586,48 @@ export default function LiveEventDetailsCard({
               {diversionRoutes.map((route, i) => (
                 <div
                   key={`${route.at_risk_corridor}-${route.via_corridor}-${i}`}
-                  className="p-2.5 rounded-lg border border-green-500/20 bg-green-500/5"
+                  className="p-3 rounded-xl border border-border bg-background shadow-sm space-y-3"
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground flex-wrap">
-                    <span className="text-red-400">{route.at_risk_corridor}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-md shadow-sm">
+                      Blocked: {route.at_risk_corridor}
+                    </span>
                     <ArrowRight size={12} className="text-muted-foreground shrink-0" />
-                    <span className="text-green-400">via {route.via_corridor}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded-md shadow-sm">
+                      Detour: {route.via_corridor}
+                    </span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                    <MapPin size={10} className="shrink-0" />
-                    Divert at {route.from.name}
-                    {route.rejoins
-                      ? ` • rejoin at ${route.to.name}`
-                      : ` • hand off to ${route.to.name}`}
+
+                  <div className="flex flex-col gap-1 pl-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 flex justify-center">
+                        <MapPin size={12} className="text-red-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground leading-none">
+                        Divert at{' '}
+                        <span className="font-bold text-foreground">{route.from.name}</span>
+                      </span>
+                    </div>
+                    <div className="w-4 flex justify-center py-1">
+                      <div className="w-[1.5px] h-3 bg-border/80"></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 flex justify-center">
+                        <Navigation size={12} className="text-green-500" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground leading-none">
+                        {route.rejoins ? 'Rejoin at' : 'Hand off to'}{' '}
+                        <span className="font-bold text-foreground">{route.to.name}</span>
+                      </span>
+                    </div>
                   </div>
+
                   {route.reason && (
-                    <p className="text-[10px] text-muted-foreground mt-1 italic leading-snug">
-                      {route.reason}
-                    </p>
+                    <div className="pt-2 border-t border-border/50">
+                      <p className="text-[10px] text-muted-foreground italic leading-snug">
+                        {route.reason}
+                      </p>
+                    </div>
                   )}
                 </div>
               ))}

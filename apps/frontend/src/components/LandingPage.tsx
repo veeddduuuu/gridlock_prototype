@@ -16,10 +16,12 @@ import {
   Zap,
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { HeroSection } from '@/components/ui/hero-section-dark'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 import CircularPipeline from './dashboard/CircularPipeline'
@@ -30,27 +32,23 @@ import CircularPipeline from './dashboard/CircularPipeline'
 
 const features = [
   {
-    title: 'Graph BFS Propagation Engine',
-    description:
-      'Simulates real-time queue spillback and congestion spread on a live road graph, mapping exactly where gridlock will hit next.',
+    titleKey: 'featuresList.bfsTitle',
+    descriptionKey: 'featuresList.bfsDesc',
     icon: Activity,
   },
   {
-    title: 'ML Event Fingerprinting',
-    description:
-      'Pattern-matches live incidents against thousands of historical analogues to instantly predict severity, duration, and clearance times.',
+    titleKey: 'featuresList.mlTitle',
+    descriptionKey: 'featuresList.mlDesc',
     icon: Brain,
   },
   {
-    title: 'LLM-Powered Interventions',
-    description:
-      'Large language models dynamically recommend optimal barricade placements and generate alternative routing strategies to choke off congestion.',
+    titleKey: 'featuresList.llmTitle',
+    descriptionKey: 'featuresList.llmDesc',
     icon: Zap,
   },
   {
-    title: 'Powered by MapMyIndia',
-    description:
-      'Enterprise-grade geocoding and mapping infrastructure provides the highly accurate spatial context required for our AI simulations.',
+    titleKey: 'featuresList.mmiTitle',
+    descriptionKey: 'featuresList.mmiDesc',
     icon: MapPin,
   },
 ]
@@ -60,39 +58,35 @@ const features = [
 // "Forecast Coverage" is the model's conformal prediction-interval target coverage
 // — a real, calibrated metric, unlike the previous unmeasured "1s" latency claim.
 const stats = [
-  { value: 30, suffix: 'm', label: 'Congestion Forecast', icon: Clock },
-  { value: 2.5, suffix: 'k+', label: 'Incident Fingerprints', icon: Brain },
-  { value: 90, suffix: '%', label: 'Forecast Coverage', icon: Radar },
-  { value: 1, suffix: '', label: 'Unified Mission', icon: Waypoints },
+  { value: 30, suffix: 'm', labelKey: 'stats.forecast', icon: Clock },
+  { value: 2.5, suffix: 'k+', labelKey: 'stats.fingerprints', icon: Brain },
+  { value: 90, suffix: '%', labelKey: 'stats.coverage', icon: Radar },
+  { value: 1, suffix: '', labelKey: 'stats.mission', icon: Waypoints },
 ]
 
 const steps = [
   {
     step: '01',
-    title: 'Detect',
-    description:
-      'Live data from city infrastructure flows into the platform, instantly highlighting anomalies and traffic buildup.',
+    titleKey: 'steps.detectTitle',
+    descriptionKey: 'steps.detectDesc',
     icon: Activity,
   },
   {
     step: '02',
-    title: 'Anticipate',
-    description:
-      'The system forecasts congestion spread, recommending barricade deployments and resource allocation before gridlock occurs.',
+    titleKey: 'steps.anticipateTitle',
+    descriptionKey: 'steps.anticipateDesc',
     icon: Brain,
   },
   {
     step: '03',
-    title: 'Dispatch',
-    description:
-      'Controllers issue routing orders and barricade plans. Fleet units receive them instantly on their MapMyIndia-powered mobile workspace.',
+    titleKey: 'steps.dispatchTitle',
+    descriptionKey: 'steps.dispatchDesc',
     icon: Send,
   },
   {
     step: '04',
-    title: 'Resolve',
-    description:
-      'Officers clear incidents on-site. The dashboard updates in real-time, restoring normal traffic flow patterns automatically.',
+    titleKey: 'steps.resolveTitle',
+    descriptionKey: 'steps.resolveDesc',
     icon: CheckCircle2,
   },
 ]
@@ -176,19 +170,12 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
 /* ------------------------------------------------------------------ */
 
 function SystemChatter() {
-  const [logs, setLogs] = useState<string[]>([])
+  const { t } = useTranslation()
+  const [logIndices, setLogIndices] = useState<number[]>([])
   useEffect(() => {
-    const msgs = [
-      '[SYS] Ingesting live traffic feed...',
-      '[ML_ENGINE] Fingerprint matched: 2,497 analogues.',
-      '[GRAPH_BFS] Node 42A -> Node 42B spillback predicted.',
-      '[BAR_RECOMMEND] Critical junction identified.',
-      '[DISPATCH] Rerouting Unit 04 via MapMyIndia APIs...',
-      '[SYS] Congestion decay accelerated by 1.5x.',
-    ]
     let i = 0
     const interval = setInterval(() => {
-      setLogs((prev) => [...prev.slice(-3), msgs[i % msgs.length]])
+      setLogIndices((prev) => [...prev.slice(-3), (i % 6) + 1])
       i++
     }, 2500)
     return () => clearInterval(interval)
@@ -201,13 +188,14 @@ function SystemChatter() {
         <div className="w-2 h-2 rounded-full bg-yellow-500" />
         <div className="w-2 h-2 rounded-full bg-green-500" />
         <span className="ml-2 text-emerald-500/70 font-semibold tracking-wider">
-          sys_chatter.log
+          {t('systemChatter.title')}
         </span>
       </div>
       <div className="flex flex-col gap-1.5 min-h-[70px] justify-end">
-        {logs.map((log, idx) => (
+        {logIndices.map((logIdx, idx) => (
           <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-            <span className="text-emerald-500/50 mr-1">{'>'}</span> {log}
+            <span className="text-emerald-500/50 mr-1">{'>'}</span>{' '}
+            {t(`systemChatter.log${logIdx}`)}
           </motion.div>
         ))}
         <motion.div animate={{ opacity: [1, 0] }} transition={{ repeat: Infinity, duration: 0.8 }}>
@@ -284,6 +272,7 @@ function SmoothScroll({ children }: { children: React.ReactNode }) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   // Hydrate the "Incident Fingerprints" stat from the live ML corpus. Falls back to
   // the build-time value in `stats` if the backend/ML service isn't reachable.
@@ -302,7 +291,7 @@ export default function LandingPage() {
   }, [])
 
   const liveStats = stats.map((s) =>
-    s.label === 'Incident Fingerprints' && corpusSize
+    s.labelKey === 'stats.fingerprints' && corpusSize
       ? { ...s, value: Math.round((corpusSize / 1000) * 10) / 10, suffix: 'k+' }
       : s,
   )
@@ -337,23 +326,24 @@ export default function LandingPage() {
             onClick={(e) => scrollToSection(e, 'features')}
             className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Features
+            {t('nav.features')}
           </a>
           <a
             href="#how-it-works"
             onClick={(e) => scrollToSection(e, 'how-it-works')}
             className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            How It Works
+            {t('nav.howItWorks')}
           </a>
           <a
             href="#roles-section"
             onClick={(e) => scrollToSection(e, 'roles-section')}
             className="hidden md:inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Get Started
+            {t('nav.getStarted')}
           </a>
           <div className="w-px h-5 bg-border hidden md:block" />
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
       </nav>
@@ -362,13 +352,13 @@ export default function LandingPage() {
         <div className="relative flex flex-col bg-black/40 font-sans">
           {/* ── Hero ───────────────────────────────────────────────────── */}
           <HeroSection
-            title="The Traffic Bottleneck Ends Here"
+            title={t('hero.title')}
             subtitle={{
-              regular: 'Clear congestion before it happens with ',
+              regular: t('hero.subtitle'),
               gradient: 'GridLock.',
             }}
-            description="Transform reactive traffic control into a proactive science. GridLock leverages graph simulation and ML fingerprinting to anticipate congestion spread, automatically dispatch fleets, and deploy barricades—all unified on MapMyIndia."
-            ctaText="Get Started"
+            description={t('hero.description')}
+            ctaText={t('nav.getStarted')}
             ctaHref="#roles-section"
             onClick={(e) =>
               scrollToSection(e as unknown as React.MouseEvent<HTMLElement>, 'roles-section')
@@ -397,7 +387,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mx-auto flex items-center gap-2 px-3 py-1 bg-background/80 rounded-md border border-border/30 text-xs text-muted-foreground">
                   <Shield size={12} className="text-primary" />
-                  GridLock Command Center
+                  {t('commandCenter.title')}
                 </div>
                 <div className="w-[42px]" /> {/* Spacer for symmetry */}
               </div>
@@ -408,15 +398,15 @@ export default function LandingPage() {
                 <div className="w-64 border-r border-border/40 bg-muted/10 p-4 flex flex-col gap-4">
                   <div className="space-y-1">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Live Metrics
+                      {t('commandCenter.liveMetrics')}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-background/80 border border-border/40 rounded-lg p-2">
-                        <p className="text-xs text-muted-foreground">Active</p>
+                        <p className="text-xs text-muted-foreground">{t('commandCenter.active')}</p>
                         <p className="text-lg font-bold text-red-500">3</p>
                       </div>
                       <div className="bg-background/80 border border-border/40 rounded-lg p-2">
-                        <p className="text-xs text-muted-foreground">Fleet</p>
+                        <p className="text-xs text-muted-foreground">{t('commandCenter.fleet')}</p>
                         <p className="text-lg font-bold text-emerald-500">12/15</p>
                       </div>
                     </div>
@@ -424,25 +414,25 @@ export default function LandingPage() {
 
                   <div className="space-y-2">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Recent Alerts
+                      {t('commandCenter.recentAlerts')}
                     </p>
                     {[
                       {
-                        title: 'Severe Congestion',
-                        loc: 'Siddalingaiah Circle',
-                        time: 'Just now',
+                        title: t('commandCenter.alert1Title'),
+                        loc: t('commandCenter.alert1Loc'),
+                        time: t('commandCenter.alert1Time'),
                         color: 'bg-red-500',
                       },
                       {
-                        title: 'Barricade Deployed',
-                        loc: 'MG Road Junction',
-                        time: '2m ago',
+                        title: t('commandCenter.alert2Title'),
+                        loc: t('commandCenter.alert2Loc'),
+                        time: t('commandCenter.alert2Time'),
                         color: 'bg-primary',
                       },
                       {
-                        title: 'Officer Dispatched',
-                        loc: 'Koramangala 80ft',
-                        time: '5m ago',
+                        title: t('commandCenter.alert3Title'),
+                        loc: t('commandCenter.alert3Loc'),
+                        time: t('commandCenter.alert3Time'),
                         color: 'bg-emerald-500',
                       },
                     ].map((alert, i) => (
@@ -491,14 +481,18 @@ export default function LandingPage() {
                     <div className="absolute top-[60%] left-[30%]">
                       <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-emerald-500/30 shadow-lg">
                         <Navigation size={10} className="text-emerald-500" />
-                        <span className="text-[10px] font-medium text-emerald-500">Unit 04</span>
+                        <span className="text-[10px] font-medium text-emerald-500">
+                          {t('commandCenter.unit')}
+                        </span>
                       </div>
                     </div>
 
                     <div className="absolute top-[25%] left-[70%]">
                       <div className="flex items-center gap-1 bg-background/90 px-2 py-1 rounded-full border border-primary/30 shadow-lg">
                         <Shield size={10} className="text-primary" />
-                        <span className="text-[10px] font-medium text-primary">Barricade</span>
+                        <span className="text-[10px] font-medium text-primary">
+                          {t('commandCenter.barricade')}
+                        </span>
                       </div>
                     </div>
 
@@ -531,7 +525,7 @@ export default function LandingPage() {
                   </div>
                   <div className="absolute bottom-4 left-4 bg-background/80 px-2 py-1 rounded-md border border-border/30 backdrop-blur-md">
                     <span className="text-[9px] text-muted-foreground font-medium">
-                      Powered by MapMyIndia
+                      {t('commandCenter.poweredBy')}
                     </span>
                   </div>
 
@@ -630,7 +624,7 @@ export default function LandingPage() {
                   <span className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
                     <AnimatedCounter value={s.value} suffix={s.suffix} />
                   </span>
-                  <span className="text-sm text-muted-foreground">{s.label}</span>
+                  <span className="text-sm text-muted-foreground">{t(s.labelKey)}</span>
                 </motion.div>
               ))}
             </motion.div>
@@ -647,13 +641,13 @@ export default function LandingPage() {
                 className="text-center mb-20"
               >
                 <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
-                  Platform Capabilities
+                  {t('features.sectionLabel')}
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-                  Everything you need for smarter cities
+                  {t('features.title')}
                 </h2>
                 <p className="text-muted-foreground max-w-lg mx-auto">
-                  Built for scale. Designed for the chaos of real-world traffic management.
+                  {t('features.description')}
                 </p>
               </motion.div>
 
@@ -686,9 +680,11 @@ export default function LandingPage() {
                       >
                         <f.icon size={24} strokeWidth={2} />
                       </motion.div>
-                      <h3 className="text-xl font-bold text-foreground relative z-10">{f.title}</h3>
+                      <h3 className="text-xl font-bold text-foreground relative z-10">
+                        {t(f.titleKey)}
+                      </h3>
                       <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
-                        {f.description}
+                        {t(f.descriptionKey)}
                       </p>
 
                       <motion.span
@@ -696,7 +692,7 @@ export default function LandingPage() {
                         whileHover={{ x: 4 }}
                         className="inline-flex items-center gap-1 text-xs font-semibold text-primary cursor-pointer mt-auto pt-4 relative z-10 uppercase tracking-wider"
                       >
-                        Learn more <ChevronRight size={14} />
+                        {t('misc.learnMore')} <ChevronRight size={14} />
                       </motion.span>
                     </motion.div>
                   )
@@ -716,15 +712,12 @@ export default function LandingPage() {
                 className="text-center mb-10"
               >
                 <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
-                  Live Engine Demo
+                  {t('demo.sectionLabel')}
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-                  The GridLock Pipeline in Action
+                  {t('demo.title')}
                 </h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
-                  Watch our 10-step sequence flow seamlessly from event ingestion through machine
-                  learning prediction and kinematic fluid dynamics.
-                </p>
+                <p className="text-muted-foreground max-w-xl mx-auto">{t('demo.description')}</p>
               </motion.div>
 
               <div className="flex justify-center">
@@ -746,13 +739,13 @@ export default function LandingPage() {
                 className="text-center mb-20"
               >
                 <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
-                  How It Works
+                  {t('howItWorks.sectionLabel')}
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-                  From raw data to resolved incidents
+                  {t('howItWorks.title')}
                 </h2>
                 <p className="text-muted-foreground max-w-lg mx-auto">
-                  Four seamless stages power the GridLock pipeline, end to end.
+                  {t('howItWorks.description')}
                 </p>
               </motion.div>
 
@@ -809,11 +802,11 @@ export default function LandingPage() {
                           <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                             Stage {s.step}
                           </span>
-                          <h3 className="text-xl font-bold text-foreground">{s.title}</h3>
+                          <h3 className="text-xl font-bold text-foreground">{t(s.titleKey)}</h3>
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed pl-14">
-                        {s.description}
+                        {t(s.descriptionKey)}
                       </p>
                     </motion.div>
                   </div>
@@ -833,13 +826,13 @@ export default function LandingPage() {
                 className="text-center mb-16"
               >
                 <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-3">
-                  Choose Your Role
+                  {t('roleSelection.sectionLabel')}
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-                  Select your workspace
+                  {t('roleSelection.title')}
                 </h2>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  Two dedicated interfaces. One unified mission.
+                  {t('roleSelection.description')}
                 </p>
               </motion.div>
 
@@ -869,10 +862,11 @@ export default function LandingPage() {
                       <Radar size={28} strokeWidth={1.8} />
                     </motion.div>
 
-                    <h3 className="text-2xl font-bold text-foreground mb-2">Command Center</h3>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">
+                      {t('roleSelection.controllerTitle')}
+                    </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                      For traffic controllers. Monitor city-wide traffic, plan events, and deploy
-                      resources via the AI pipeline.
+                      {t('roleSelection.controllerDesc')}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-8">
@@ -915,10 +909,11 @@ export default function LandingPage() {
                       <Navigation size={28} strokeWidth={1.8} />
                     </motion.div>
 
-                    <h3 className="text-2xl font-bold text-foreground mb-2">Field Operations</h3>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">
+                      {t('roleSelection.fleetTitle')}
+                    </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                      For fleet officers. Receive routing orders, view impact zones, and report
-                      incidents directly from the field.
+                      {t('roleSelection.fleetDesc')}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-8">
@@ -969,18 +964,17 @@ export default function LandingPage() {
                   <Users size={28} />
                 </motion.div>
                 <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-                  Ready to transform your city&apos;s traffic?
+                  {t('cta.title')}
                 </h2>
                 <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                  Join the growing network of municipalities using GridLock to build safer, faster,
-                  and smarter transportation systems.
+                  {t('cta.description')}
                 </p>
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Button
                     onClick={(e) => scrollToSection(e, 'roles-section')}
                     className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 text-sm font-medium"
                   >
-                    Get Started Now
+                    {t('cta.button')}
                     <ArrowRight size={16} className="ml-1" />
                   </Button>
                 </motion.div>
@@ -1021,9 +1015,7 @@ export default function LandingPage() {
                     Get Started
                   </a>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Powered by <span className="font-semibold text-foreground">MapMyIndia</span>
-                </p>
+                <p className="text-xs text-muted-foreground">{t('footer.copyright')}</p>
               </div>
             </div>
           </footer>

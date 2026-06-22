@@ -180,6 +180,30 @@ const getDivertMarkerHtml = () => {
   `
 }
 
+// "Rejoin" badge anchored at the diversion exit junction.
+const getRejoinMarkerHtml = (rejoins: boolean) => {
+  return `
+    <div style="
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background-color: #10b981;
+      border: 2px solid white;
+      box-shadow: 0 0 10px #10b981;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+      ${rejoins ? 'REJOIN' : 'HAND OFF'}
+    </div>
+  `
+}
+
 // Directional chevron rendered along the reroute path, rotated to the heading.
 const getChevronHtml = (rotationDeg: number) => {
   return `
@@ -977,6 +1001,9 @@ export default function MapplsMap({
       routes.forEach((r, i) => {
         const badge = addMarker(r.from.lat, r.from.lon, { html: getDivertMarkerHtml() })
         if (badge) diversionOverlaysRef.current.push(badge)
+
+        const rejoinBadge = addMarker(r.to.lat, r.to.lon, { html: getRejoinMarkerHtml(r.rejoins) })
+        if (rejoinBadge) diversionOverlaysRef.current.push(rejoinBadge)
 
         const pts = rerouteResults[i]
         if (pts && pts.length >= 2) {
