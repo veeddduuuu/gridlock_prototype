@@ -261,12 +261,46 @@ def compute_anomaly_score(
             "context": f"No Prophet baseline available for {corridor}",
         }
 
-    # Predict expected duration for this timestamp
-    future = pd.DataFrame({"ds": [dt_naive]})
-    forecast = model.predict(future)
-    expected_duration = max(1.0, float(forecast["yhat"].iloc[0]))
-    expected_lower = max(1.0, float(forecast["yhat_lower"].iloc[0]))
-    expected_upper = max(1.0, float(forecast["yhat_upper"].iloc[0]))
+    def _anchored_forecast(m):
+        """Forecast with the timestamp anchored inside the model's training window.
+
+        The baseline we want is the corridor's hour-of-day / day-of-week seasonal
+        level, not a long-term trend extrapolated years past the training data —
+        for dates far beyond the training range Prophet's trend drifts to
+        non-physical (often negative) values. Shifting by whole weeks preserves the
+        weekday and hour that drive seasonality.
+        """
+        ds_anchor = dt_naive
+        try:
+            train_max = m.history["ds"].max()
+            train_min = m.history["ds"].min()
+            while ds_anchor > train_max:
+                ds_anchor -= pd.Timedelta(days=7)
+            while ds_anchor < train_min:
+                ds_anchor += pd.Timedelta(days=7)
+        except Exception:
+            ds_anchor = dt_naive
+        fc = m.predict(pd.DataFrame({"ds": [ds_anchor]}))
+        return (
+            float(fc["yhat"].iloc[0]),
+            float(fc["yhat_lower"].iloc[0]),
+            float(fc["yhat_upper"].iloc[0]),
+        )
+
+    yhat, ylow, yhigh = _anchored_forecast(model)
+
+    # A sparse corridor model can produce a degenerate (implausibly low) seasonal
+    # baseline at some hours, which inflates deviation% meaninglessly. The global
+    # baseline is the more reliable estimate there — fall back to it.
+    if yhat < 10.0 and model_source.startswith("corridor") and "__global__" in models:
+        g_yhat, g_low, g_high = _anchored_forecast(models["__global__"])
+        if g_yhat > yhat:
+            yhat, ylow, yhigh = g_yhat, g_low, g_high
+            model_source = "global"
+
+    expected_duration = max(1.0, yhat)
+    expected_lower = max(1.0, ylow)
+    expected_upper = max(1.0, yhigh)
 
     # Anomaly score
     deviation = predicted_duration_mins - expected_duration
