@@ -638,7 +638,7 @@ The controller's main view. Everything visible at once without switching screens
 | Queue | BullMQ + Redis |
 | Database | PostgreSQL |
 | ML Model | XGBoost / RandomForest (Python + FastAPI) |
-| LLM | Anthropic Claude API or OpenAI (direct, no LangChain) |
+| LLM | Groq API (direct, no LangChain) |
 | Map tiles | OpenStreetMap via Leaflet |
 | Auth | JWT (hardcoded seed users for demo) |
 

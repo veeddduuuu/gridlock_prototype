@@ -1,6 +1,6 @@
 # Groq OSS 120B Integration — Recommendation Service
 
-Since you are using Groq with an Open Source 120B model (e.g., Llama-3.1-70B or similar large OSS models), the prompt engineering and API integration need to be optimized for strict JSON output adherence, as OSS models can sometimes struggle with exact schema matching compared to GPT-4/Claude. 
+Since you are using Groq with an Open Source 120B model (e.g., Llama-3.1-70B or similar large OSS models), the prompt engineering and API integration need to be optimized for strict JSON output adherence, as OSS models can sometimes struggle with exact schema matching compared to proprietary frontier models. 
 
 Below is the complete implementation plan, prompt design, and TypeScript code to drop into `apps/backend/src/services/recommendation.service.ts`.
 

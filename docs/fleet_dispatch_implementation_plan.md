@@ -103,7 +103,7 @@ Currently, event creation ends after scheduling the propagation job. We need to 
 
 ## Phase 4: LLM Service Integration
 
-Create `services/recommendation.service.ts` to interface with Anthropic Claude API or OpenAI API.
+Create `services/recommendation.service.ts` to interface with Groq LLM API.
 
 **Prompt Design:**
 ```text
